@@ -29,14 +29,18 @@
 #include <Solenoid.h>
 #include <Ultrasonic.h>
 #include <Encoder.h>
+#include <AnalogInput.h>
 
-#define roboRioEncoders 	true
+#define roboRioEncoders 	false
 #define talonSRXEncoders 	false
 #define USE_NAVX   			false
-#define CNTL_BOX_A 			true
-#define CNTL_BOX_B 			false
-#define	ON_ROBOT   			false
+#define CNTL_BOX_A 			false
+#define CNTL_BOX_B 			true
+#define	ON_ROBOT   			true
 #define ENABLE_USB_CAMERA	false
+#define DUAL_JOYSTICKS		true
+#define XBOX_CONTROLLER		false
+#define OI_ENABLED			true
 
 #if USE_NAVX
 // NavX-MXP headers
@@ -64,6 +68,15 @@ public:
 		gripper.Set(false);
 		intakeDeploy.Set(false);
 		engageHook.Set(false);
+
+		m_autoSwitch1.SetOversampleBits(kOversampleBits);
+		m_autoSwitch1.SetAverageBits(kAverageBits);
+		m_autoSwitch2.SetOversampleBits(kOversampleBits);
+		m_autoSwitch2.SetAverageBits(kAverageBits);
+		m_autoSwitch3.SetOversampleBits(kOversampleBits);
+		m_autoSwitch3.SetAverageBits(kAverageBits);
+		m_infraredDistance.SetOversampleBits(kOversampleBits);
+		m_infraredDistance.SetAverageBits(kAverageBits);
 
 		// Set initial angle on servo
 //		ultrasonicServo.SetAngle(90);
@@ -214,12 +227,11 @@ public:
 		int servoAngle = 80;
 		int passCount = 0;
 		const int numLoopsPerScan = 100;
-		float rightY;
-		float leftY;
-//		bool buttonA;
-//		bool buttonY;
-//		bool forward;
-//		bool reverse;
+		double rightY = 0.0;
+		double leftY = 0.0;
+		double liftY = 0.0;
+		double intakeY = 0.0;
+		double intakeX = 0.0;
 
 		while (IsOperatorControl()) {
 
@@ -309,70 +321,112 @@ public:
 	        SmartDashboard::PutNumber(  "QuaternionY",          ahrs->GetQuaternionY());
 	        SmartDashboard::PutNumber(  "QuaternionZ",          ahrs->GetQuaternionZ());
 #endif
-			// Implement the deadband
+
+#if XBOX_CONTROLLER
+	        // Implement the deadband
 			rightY = -m_stick.GetY(frc::GenericHID::kRightHand);
 			leftY  = -m_stick.GetY(frc::GenericHID::kLeftHand);
+#endif
 
+#if DUAL_JOYSTICKS
+			rightY = -m_stickR.GetY();
+			leftY  = -m_stickL.GetY();
+#endif
 			if ((rightY > kBottomOfDeadBand) and (rightY < kTopOfDeadBand) )
-				rightY = 0;
+				rightY = 0.0;
 
 			if ((leftY > kBottomOfDeadBand) and (leftY < kTopOfDeadBand) )
-				leftY = 0;
+				leftY = 0.0;
 
 			// Make it so....
 			m_robotDrive.TankDrive(leftY, rightY);
 
-			// Solenoid code
-//			buttonA = m_stick.GetRawButton(kDoubleSolenoidReverse);
-//			buttonY = m_stick.GetRawButton(kDoubleSolenoidForward);
+#if OI_ENABLED
 
-			// In order to set the double solenoid, we will say that if neither
-			//   button is pressed, it is off, if just one button is pressed,
-			//   set the solenoid to correspond to that button, and if both
-			//   are pressed, set the solenoid to Forwards.
-//			if (buttonY)
-//				piston.Set(DoubleSolenoid::kForward);
-//			else if (buttonA)
-//				piston.Set(DoubleSolenoid::kReverse);
-//			else
-//				piston.Set(DoubleSolenoid::kOff);
+			// pneumatics
+			if (m_sensorBypassStick.GetRawButton(kDeployGrabber)) {
+				intakeDeploy.Set(true);
+			} else {
+				intakeDeploy.Set(false);
+			}
 
-//			if (buttonA) {
-				// Checks to see if the solenoid has already been set
-				// I think that this was a problem last year, so I don't know if this works
-//				if (piston.Get() != DoubleSolenoid::kReverse)
-//					piston.Set(DoubleSolenoid::kReverse);
-//			}
+			if (m_controlStick.GetRawButton(kGrabberEngage)) {
+				gripper.Set(true);
+			} else {
+				gripper.Set(false);
+			}
 
-//			if (buttonY) {
-//				// Checks to see if the solenoid has already been set
-//				// I think that this was a problem last year, so I don't know if this works
-//				if (piston.Get() != DoubleSolenoid::kForward)
-//					piston.Set(DoubleSolenoid::kForward);
-//			}
-			// End Solenoid Code
+			if (m_controlStick.GetRawButton(kHookDeploy)) {
+				engageHook.Set(true);
+			} else {
+				engageHook.Set(false);
+			}
 
-			// Spike Relay Code
-			// Retrieve the button values. GetRawButton will return
-			//   true if the button is pressed and false if not.
-//			forward = m_stick.GetRawButton(kRelayForwardButton);
-//			reverse = m_stick.GetRawButton(kRelayReverseButton);
+			if (m_controlStick.GetRawButton(kBackBarDeploy)) {
+				backBar.Set(DoubleSolenoid::kForward);
+			} else {
+				backBar.Set(DoubleSolenoid::kReverse);
+			}
 
-			// Depending on the button values, we want to use one of
-			//   kOn, kOff, kForward, or kReverse.
-			// kOn sets both outputs to 12V, kOff sets both to 0V,
-			//   kForward sets forward to 12V and reverse to 0V, and
-			//   kReverse sets reverse to 12V and forward to 0V.
-//			if (forward && reverse)
-//				spikeRelay.Set(Relay::kOn);
-//			else if (forward)
-//				spikeRelay.Set(Relay::kForward);
-//			else if (reverse)
-//				spikeRelay.Set(Relay::kReverse);
-//			else
-//				spikeRelay.Set(Relay::kOff);
-			// End Spike Relay Code
+			if (m_controlStick.GetRawButton(kHookDeploy)) {
+				liftLocker.Set(DoubleSolenoid::kForward);
+			} else {
+				liftLocker.Set(DoubleSolenoid::kReverse);
+			}
 
+			//******************************************************************
+			// Lift Joystick
+			liftY = -m_controlStick.GetRawAxis(kLiftJoystickY);
+
+			if ((liftY > kBottomOfDeadBand) and (liftY < kTopOfDeadBand) )
+				liftY = 0.0;
+
+			if (!m_sensorBypassStick.GetRawButton(kDisableLiftTopLS)) {
+				if (m_atLiftTop.Get()) {
+					// stop the Lift
+					liftY = 0.0;
+				}
+			}
+			if (!m_sensorBypassStick.GetRawButton(kDisableLiftBottomLS)) {
+				if (m_atLiftBottom.Get()) {
+					// stop the Lift
+					liftY = 0.0;
+				}
+			}
+			// Make it so....
+			m_lift.Set(liftY);
+
+			//******************************************************************
+
+			//******************************************************************
+			// Intake Subsystem
+			intakeX = -m_controlStick.GetRawAxis(kIntakeJoystickX);
+			intakeY = -m_controlStick.GetRawAxis(kIntakeJoystickY);
+
+			if ((intakeX > kBottomOfDeadBand) and (intakeX < kTopOfDeadBand) )
+				intakeX = 0.0;
+
+			if ((intakeY > kBottomOfDeadBand) and (intakeY < kTopOfDeadBand) )
+				intakeY = 0.0;
+
+			// Cube is contacting the left intake limit switch
+			if (m_leftIntake->Get()) {
+				intakeX = 0.0;
+			}
+			// Cube is contacting the right intake limit switch
+			if (m_rightIntake->Get()) {
+				intakeY = 0.0;
+			}
+
+			// TODO: Figure out the mixing for the Intake Joystick
+			//if ()
+			// Make it so....
+			m_rightIntake->Set(intakeX);
+			m_leftIntake->Set(intakeY);
+
+			//******************************************************************
+
+#endif
 			passCount++;
 
 			if ((passCount % numLoopsPerScan) == 0) {
@@ -385,14 +439,8 @@ public:
 
 				passCount = 0;
 				servoAngle += offsetVal;
-				//
+
 			}
-
-//			if (!(limitSwitch.Get())) {
-				// It's closed now
-//			}
-
-			//Wait(kUpdatePeriod);
 
 		}
 
@@ -435,7 +483,7 @@ private:
     const static int rotarySw1   = 0;
     const static int rotarySw2   = 1;
     const static int rotarySw3 	 = 2;
-    const static int Infrared	 = 3;
+    const static int infrared	 = 3;
 
     // Digital IOs
     const static int kLeftIntakeLimitSw		= 0;
@@ -500,6 +548,11 @@ private:
 	const float Kp = 0.03;
 	const double kUpdatePeriod = 0.010;  // update period in seconds
 
+	// Analog Sampling settings
+	const int kOversampleBits = 4;
+	const int kAverageBits = 4;
+
+
 	// Joystick deadband settings
 	const float kBottomOfDeadBand = -0.1;
 	const float kTopOfDeadBand    =  0.1;
@@ -526,13 +579,13 @@ private:
     WPI_VictorSPX *m_rightLift   = new WPI_VictorSPX(kRightLift);
     WPI_VictorSPX *m_leftLift    = new WPI_VictorSPX(kLeftLift);
 
-    // Object for dealing with the Power Distribution Panel (PDP).
-	PowerDistributionPanel m_pdp{kPdpCanAddress};
-
 	// Compressor channel -- not really needed but we'll keep it for completeness
 	Compressor  roboCompressor{kPcmCanAddress};
 
 #endif
+
+    // Object for dealing with the Power Distribution Panel (PDP).
+	PowerDistributionPanel m_pdp{kPdpCanAddress};
 
 #if CNTL_BOX_B
 	WPI_VictorSPX *m_frontLeft   = new WPI_VictorSPX(frontLeftChannel);
@@ -549,17 +602,19 @@ private:
     WPI_TalonSRX  *m_rightLift   = new WPI_TalonSRX(kRightLift);
     WPI_TalonSRX  *m_leftLift    = new WPI_TalonSRX(kLeftLift);
 
-    // Object for dealing with the Power Distribution Panel (PDP).
-	PowerDistributionPanel m_pdp{kPdpCanAddress};
-
 	// Compressor channel -- not really needed but we'll keep it for completeness
 	Compressor  roboCompressor{kPcmCanAddress};
 #endif
 
 	// Declare speed controller groups if we're on the robot
 #if ON_ROBOT
+	// Mobility SpeedControllerGroups
     SpeedControllerGroup m_left{*m_frontLeft, *m_rearLeft};
     SpeedControllerGroup m_right{*m_frontRight, *m_rearRight};
+
+    // Lift SpeedControllerGroup
+    SpeedControllerGroup m_lift{*m_leftLift, *m_rightLift};
+
 #else
     SpeedControllerGroup m_left{*m_frontLeft};
     SpeedControllerGroup m_right{*m_frontRight};
@@ -568,8 +623,33 @@ private:
     // Tell WPIlib that we're Tank drive
     DifferentialDrive m_robotDrive{m_left, m_right};
 
+#if XBOX_CONTROLLER
     // Joysticks
 	XboxController m_stick{kLeftDriverJoystick};
+#endif
+
+#if DUAL_JOYSTICKS
+    // Joysticks
+	Joystick m_stickL{kLeftDriverJoystick};
+	Joystick m_stickR{kRightDriverJoystick};
+#endif
+
+#if OI_ENABLED
+	Joystick m_sensorBypassStick{kDisableSwitchJoystick};
+	Joystick m_controlStick{kControlJoystick};
+#endif
+
+	// Instantiate the Analog Inputs
+	AnalogInput m_autoSwitch1{rotarySw1};
+	AnalogInput m_autoSwitch2{rotarySw2};
+	AnalogInput m_autoSwitch3{rotarySw3};
+	AnalogInput m_infraredDistance{infrared};
+
+	// Instantiate the Digital IOs
+	DigitalInput  m_leftIntakeLimitSwitch{kLeftIntakeLimitSw};
+	DigitalInput  m_rightIntakeLimitSwitch{kRightIntakeLimitSw};
+	DigitalInput  m_atLiftTop{kLiftTopLimitSw};
+	DigitalInput  m_atLiftBottom{kLiftBottomLimitSw};
 
 	// Pneumatics
 	DoubleSolenoid backBar{kPcmCanAddress, backBarIn, backBarOut};
@@ -577,13 +657,6 @@ private:
 	Solenoid 	   gripper{kPcmCanAddress, gripCube};
 	Solenoid	   intakeDeploy{kPcmCanAddress, deployIntake};
 	Solenoid	   engageHook{kPcmCanAddress, hook};
-
-	// Gyro on the roboRio
-//	AnalogGyro  analogGyro{gyroChannel};
-
-	// Ultrasonic Range finder
-//	Servo      ultrasonicServo{kServoChannel};
-//	Ultrasonic sr04Ultrasonic{kUltraSonicPingInput, kUltraSonicPingOutput, Ultrasonic::kInches};
 
 #if talonSRXEncoders
 #endif
