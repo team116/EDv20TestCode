@@ -51,7 +51,7 @@ using namespace frc;
 using namespace std;
 using namespace nt;
 
-class Robot : public frc::IterativeRobot {
+class Robot: public frc::IterativeRobot {
 
 public:
 	void RobotInit() {
@@ -81,7 +81,7 @@ public:
 		// Set initial angle on servo
 //		ultrasonicServo.SetAngle(90);
 
-		// Gyro calibration
+// Gyro calibration
 //		analogGyro.Calibrate();
 //		analogGyro.Reset();
 
@@ -121,7 +121,7 @@ public:
 #endif
 
 #if USE_NAVX
-    	NetworkTableInstance::GetDefault().GetTable("datatable");
+		NetworkTableInstance::GetDefault().GetTable("datatable");
 		try {
 			/***********************************************************************
 			 * navX-MXP:
@@ -134,14 +134,14 @@ public:
 			 *
 			 * Multiple navX-model devices on a single robot are supported.
 			 ************************************************************************/
-        	ahrs = new AHRS(SPI::Port::kMXP);
-            //ahrs = new AHRS(I2C::Port::kMXP);
-            ahrs->EnableLogging(true);
-        } catch (std::exception& ex ) {
-            std::string err_string = "Error instantiating navX MXP:  ";
-            err_string += ex.what();
-            DriverStation::ReportError(err_string.c_str());
-        }
+			ahrs = new AHRS(SPI::Port::kMXP);
+			//ahrs = new AHRS(I2C::Port::kMXP);
+			ahrs->EnableLogging(true);
+		} catch (std::exception& ex ) {
+			std::string err_string = "Error instantiating navX MXP:  ";
+			err_string += ex.what();
+			DriverStation::ReportError(err_string.c_str());
+		}
 #endif
 	}
 
@@ -166,19 +166,17 @@ public:
 		if (gameData.length() > 0) {
 			if (gameData[0] == 'L') {
 				DriverStation::ReportError("Switch is on the left");
-			}
-			else {
+			} else {
 				DriverStation::ReportError("Switch is on the right");
 			}
 			if (gameData[1] == 'L') {
 				DriverStation::ReportError("Scale is on the left");
-			}
-			else {
+			} else {
 				DriverStation::ReportError("Scale is on the right");
 			}
 		}
 
-        autoLoopCounter = 0;
+		autoLoopCounter = 0;
 		m_autoSelected = m_chooser.GetSelected();
 		// m_autoSelected = SmartDashboard::GetString(
 		// 		"Auto Selector", kAutoNameDefault);
@@ -193,7 +191,7 @@ public:
 
 	void AutonomousPeriodic() {
 //		if (m_autoSelected == kAutoNameCustom) {
-			// Custom Auto goes here
+		// Custom Auto goes here
 //			if(autoLoopCounter < 100) //Check if we've completed 100 loops (approximately 2 seconds)
 //			{
 //				gyroAngle = analogGyro.GetAngle();
@@ -205,7 +203,7 @@ public:
 //					m_robotDrive.ArcadeDrive(0.0, 0.0); 	// stop robot
 //			}
 //		} else {
-			// Default Auto goes here
+		// Default Auto goes here
 //			if(autoLoopCounter < 100) //Check if we've completed 100 loops (approximately 2 seconds)
 //			{
 //				gyroAngle = analogGyro.GetAngle();
@@ -222,7 +220,7 @@ public:
 	void TeleopInit() {
 	}
 
-	double getInfraredDistance (int analogChannel) {
+	double getInfraredDistance(int analogChannel) {
 		double distance;
 
 		distance = 0.0;
@@ -240,16 +238,16 @@ public:
 		double intakeY = 0.0;
 		double intakeX = 0.0;
 		double infraredDistance = 0.0;
-		bool   bRtEncDisable        = false;
-		bool   bLftEncDisable       = false;
-		bool   bStringPotDisable    = false;
-		bool   bRtIntakeLSDisable   = false;
-		bool   bLftIntakeLSDisable  = false;
-		bool   bLiftTopLSDisable    = false;
-		bool   bLiftBottomLSDisable = false;
-		bool   bExtra1Disable       = false;
-		bool   bExtra2Disable       = false;
-		bool   bExtra3Disable       = false;
+		bool bRtEncDisable = false;
+		bool bLftEncDisable = false;
+		bool bStringPotDisable = false;
+		bool bRtIntakeLSDisable = false;
+		bool bLftIntakeLSDisable = false;
+		bool bLiftTopLSDisable = false;
+		bool bLiftBottomLSDisable = false;
+		bool bExtra1Disable = false;
+		bool bExtra2Disable = false;
+		bool bExtra3Disable = false;
 
 		while (IsOperatorControl()) {
 
@@ -272,88 +270,87 @@ public:
 #endif
 
 #if USE_NAVX
-	        if ( !ahrs ) return;
+			if ( !ahrs ) return;
 
-	        // Uses button 6 on the XBox Controller = RB (right bumper)
-	        bool reset_yaw_button_pressed = DriverStation::GetInstance().GetStickButton(0,6);
-	        if ( reset_yaw_button_pressed ) {
-	        	ahrs->ZeroYaw();
-	        }
+			// Uses button 6 on the XBox Controller = RB (right bumper)
+			bool reset_yaw_button_pressed = DriverStation::GetInstance().GetStickButton(0,6);
+			if ( reset_yaw_button_pressed ) {
+				ahrs->ZeroYaw();
+			}
 
+			SmartDashboard::PutBoolean( "IMU_Connected", ahrs->IsConnected());
+			SmartDashboard::PutNumber( "IMU_Yaw", ahrs->GetYaw());
+			SmartDashboard::PutNumber( "IMU_Pitch", ahrs->GetPitch());
+			SmartDashboard::PutNumber( "IMU_Roll", ahrs->GetRoll());
+			SmartDashboard::PutNumber( "IMU_CompassHeading", ahrs->GetCompassHeading());
+			SmartDashboard::PutNumber( "IMU_Update_Count", ahrs->GetUpdateCount());
+			SmartDashboard::PutNumber( "IMU_Byte_Count", ahrs->GetByteCount());
+			SmartDashboard::PutNumber( "IMU_Timestamp", ahrs->GetLastSensorTimestamp());
 
-	        SmartDashboard::PutBoolean( "IMU_Connected",        ahrs->IsConnected());
-	        SmartDashboard::PutNumber(  "IMU_Yaw",              ahrs->GetYaw());
-	        SmartDashboard::PutNumber(  "IMU_Pitch",            ahrs->GetPitch());
-	        SmartDashboard::PutNumber(  "IMU_Roll",             ahrs->GetRoll());
-	        SmartDashboard::PutNumber(  "IMU_CompassHeading",   ahrs->GetCompassHeading());
-	        SmartDashboard::PutNumber(  "IMU_Update_Count",     ahrs->GetUpdateCount());
-	        SmartDashboard::PutNumber(  "IMU_Byte_Count",       ahrs->GetByteCount());
-	        SmartDashboard::PutNumber(  "IMU_Timestamp",        ahrs->GetLastSensorTimestamp());
+			/* These functions are compatible w/the WPI Gyro Class */
+			SmartDashboard::PutNumber( "IMU_TotalYaw", ahrs->GetAngle());
+			SmartDashboard::PutNumber( "IMU_YawRateDPS", ahrs->GetRate());
 
-	        /* These functions are compatible w/the WPI Gyro Class */
-	        SmartDashboard::PutNumber(  "IMU_TotalYaw",         ahrs->GetAngle());
-	        SmartDashboard::PutNumber(  "IMU_YawRateDPS",       ahrs->GetRate());
+			SmartDashboard::PutNumber( "IMU_Accel_X", ahrs->GetWorldLinearAccelX());
+			SmartDashboard::PutNumber( "IMU_Accel_Y", ahrs->GetWorldLinearAccelY());
+			SmartDashboard::PutBoolean( "IMU_IsMoving", ahrs->IsMoving());
+			SmartDashboard::PutNumber( "IMU_Temp_C", ahrs->GetTempC());
+			SmartDashboard::PutBoolean( "IMU_IsCalibrating", ahrs->IsCalibrating());
 
-	        SmartDashboard::PutNumber(  "IMU_Accel_X",          ahrs->GetWorldLinearAccelX());
-	        SmartDashboard::PutNumber(  "IMU_Accel_Y",          ahrs->GetWorldLinearAccelY());
-	        SmartDashboard::PutBoolean( "IMU_IsMoving",         ahrs->IsMoving());
-	        SmartDashboard::PutNumber(  "IMU_Temp_C",           ahrs->GetTempC());
-	        SmartDashboard::PutBoolean( "IMU_IsCalibrating",    ahrs->IsCalibrating());
+			SmartDashboard::PutNumber( "Velocity_X", ahrs->GetVelocityX() );
+			SmartDashboard::PutNumber( "Velocity_Y", ahrs->GetVelocityY() );
+			SmartDashboard::PutNumber( "Displacement_X", ahrs->GetDisplacementX() );
+			SmartDashboard::PutNumber( "Displacement_Y", ahrs->GetDisplacementY() );
 
-	        SmartDashboard::PutNumber(  "Velocity_X",           ahrs->GetVelocityX() );
-	        SmartDashboard::PutNumber(  "Velocity_Y",           ahrs->GetVelocityY() );
-	        SmartDashboard::PutNumber(  "Displacement_X",       ahrs->GetDisplacementX() );
-	        SmartDashboard::PutNumber(  "Displacement_Y",       ahrs->GetDisplacementY() );
+			/* Display Raw Gyro/Accelerometer/Magnetometer Values                       */
+			/* NOTE:  These values are not normally necessary, but are made available   */
+			/* for advanced users.  Before using this data, please consider whether     */
+			/* the processed data (see above) will suit your needs.                     */
 
-	        /* Display Raw Gyro/Accelerometer/Magnetometer Values                       */
-	        /* NOTE:  These values are not normally necessary, but are made available   */
-	        /* for advanced users.  Before using this data, please consider whether     */
-	        /* the processed data (see above) will suit your needs.                     */
+			SmartDashboard::PutNumber( "RawGyro_X", ahrs->GetRawGyroX());
+			SmartDashboard::PutNumber( "RawGyro_Y", ahrs->GetRawGyroY());
+			SmartDashboard::PutNumber( "RawGyro_Z", ahrs->GetRawGyroZ());
+			SmartDashboard::PutNumber( "RawAccel_X", ahrs->GetRawAccelX());
+			SmartDashboard::PutNumber( "RawAccel_Y", ahrs->GetRawAccelY());
+			SmartDashboard::PutNumber( "RawAccel_Z", ahrs->GetRawAccelZ());
+			SmartDashboard::PutNumber( "RawMag_X", ahrs->GetRawMagX());
+			SmartDashboard::PutNumber( "RawMag_Y", ahrs->GetRawMagY());
+			SmartDashboard::PutNumber( "RawMag_Z", ahrs->GetRawMagZ());
+			SmartDashboard::PutNumber( "IMU_Temp_C", ahrs->GetTempC());
+			/* Omnimount Yaw Axis Information                                           */
+			/* For more info, see http://navx-mxp.kauailabs.com/installation/omnimount  */
+			AHRS::BoardYawAxis yaw_axis = ahrs->GetBoardYawAxis();
+			SmartDashboard::PutString( "YawAxisDirection", yaw_axis.up ? "Up" : "Down" );
+			SmartDashboard::PutNumber( "YawAxis", yaw_axis.board_axis );
 
-	        SmartDashboard::PutNumber(  "RawGyro_X",            ahrs->GetRawGyroX());
-	        SmartDashboard::PutNumber(  "RawGyro_Y",            ahrs->GetRawGyroY());
-	        SmartDashboard::PutNumber(  "RawGyro_Z",            ahrs->GetRawGyroZ());
-	        SmartDashboard::PutNumber(  "RawAccel_X",           ahrs->GetRawAccelX());
-	        SmartDashboard::PutNumber(  "RawAccel_Y",           ahrs->GetRawAccelY());
-	        SmartDashboard::PutNumber(  "RawAccel_Z",           ahrs->GetRawAccelZ());
-	        SmartDashboard::PutNumber(  "RawMag_X",             ahrs->GetRawMagX());
-	        SmartDashboard::PutNumber(  "RawMag_Y",             ahrs->GetRawMagY());
-	        SmartDashboard::PutNumber(  "RawMag_Z",             ahrs->GetRawMagZ());
-	        SmartDashboard::PutNumber(  "IMU_Temp_C",           ahrs->GetTempC());
-	        /* Omnimount Yaw Axis Information                                           */
-	        /* For more info, see http://navx-mxp.kauailabs.com/installation/omnimount  */
-	        AHRS::BoardYawAxis yaw_axis = ahrs->GetBoardYawAxis();
-	        SmartDashboard::PutString(  "YawAxisDirection",     yaw_axis.up ? "Up" : "Down" );
-	        SmartDashboard::PutNumber(  "YawAxis",              yaw_axis.board_axis );
+			/* Sensor Board Information                                                 */
+			SmartDashboard::PutString( "FirmwareVersion", ahrs->GetFirmwareVersion());
 
-	        /* Sensor Board Information                                                 */
-	        SmartDashboard::PutString(  "FirmwareVersion",      ahrs->GetFirmwareVersion());
-
-	        /* Quaternion Data                                                          */
-	        /* Quaternions are fascinating, and are the most compact representation of  */
-	        /* orientation data.  All of the Yaw, Pitch and Roll Values can be derived  */
-	        /* from the Quaternions.  If interested in motion processing, knowledge of  */
-	        /* Quaternions is highly recommended.                                       */
-	        SmartDashboard::PutNumber(  "QuaternionW",          ahrs->GetQuaternionW());
-	        SmartDashboard::PutNumber(  "QuaternionX",          ahrs->GetQuaternionX());
-	        SmartDashboard::PutNumber(  "QuaternionY",          ahrs->GetQuaternionY());
-	        SmartDashboard::PutNumber(  "QuaternionZ",          ahrs->GetQuaternionZ());
+			/* Quaternion Data                                                          */
+			/* Quaternions are fascinating, and are the most compact representation of  */
+			/* orientation data.  All of the Yaw, Pitch and Roll Values can be derived  */
+			/* from the Quaternions.  If interested in motion processing, knowledge of  */
+			/* Quaternions is highly recommended.                                       */
+			SmartDashboard::PutNumber( "QuaternionW", ahrs->GetQuaternionW());
+			SmartDashboard::PutNumber( "QuaternionX", ahrs->GetQuaternionX());
+			SmartDashboard::PutNumber( "QuaternionY", ahrs->GetQuaternionY());
+			SmartDashboard::PutNumber( "QuaternionZ", ahrs->GetQuaternionZ());
 #endif
 
 #if XBOX_CONTROLLER
-	        // Implement the deadband
+			// Implement the deadband
 			rightY = -m_stick.GetY(frc::GenericHID::kRightHand);
-			leftY  = -m_stick.GetY(frc::GenericHID::kLeftHand);
+			leftY = -m_stick.GetY(frc::GenericHID::kLeftHand);
 #endif
 
 #if DUAL_JOYSTICKS
 			rightY = -m_stickR.GetY();
-			leftY  = -m_stickL.GetY();
+			leftY = -m_stickL.GetY();
 #endif
-			if ((rightY > kBottomOfDeadBand) and (rightY < kTopOfDeadBand) )
+			if ((rightY > kBottomOfDeadBand) and (rightY < kTopOfDeadBand))
 				rightY = 0.0;
 
-			if ((leftY > kBottomOfDeadBand) and (leftY < kTopOfDeadBand) )
+			if ((leftY > kBottomOfDeadBand) and (leftY < kTopOfDeadBand))
 				leftY = 0.0;
 
 			// Make it so....
@@ -388,20 +385,29 @@ public:
 				infraredDistance = 0.0;
 			}
 
-			bLiftBottomLSDisable = m_sensorBypassStick.GetRawButton(kDisableLiftBottomLS);
-			bLiftTopLSDisable    = m_sensorBypassStick.GetRawButton(kDisableLiftTopLS);
-			bRtIntakeLSDisable   = m_sensorBypassStick.GetRawButton(kDisableRightIntakeLS);
-			bLftIntakeLSDisable  = m_sensorBypassStick.GetRawButton(kDisableLeftIntakeLS);
-			bRtEncDisable        = m_sensorBypassStick.GetRawButton(kDisableRightEnc);
-			bLftEncDisable       = m_sensorBypassStick.GetRawButton(kDisableLeftEnc);
-			bStringPotDisable    = m_sensorBypassStick.GetRawButton(kDisableStringPot);
+			bLiftBottomLSDisable = m_sensorBypassStick.GetRawButton(
+					kDisableLiftBottomLS);
+			bLiftTopLSDisable = m_sensorBypassStick.GetRawButton(
+					kDisableLiftTopLS);
+			bRtIntakeLSDisable = m_sensorBypassStick.GetRawButton(
+					kDisableRightIntakeLS);
+			bLftIntakeLSDisable = m_sensorBypassStick.GetRawButton(
+					kDisableLeftIntakeLS);
+			bRtEncDisable = m_sensorBypassStick.GetRawButton(kDisableRightEnc);
+			bLftEncDisable = m_sensorBypassStick.GetRawButton(kDisableLeftEnc);
+			bStringPotDisable = m_sensorBypassStick.GetRawButton(
+					kDisableStringPot);
+			bExtra1Disable = m_sensorBypassStick.GetRawButton(kDisableExtra1);
+			bExtra2Disable = m_sensorBypassStick.GetRawButton(kDisableExtra2);
+			bExtra3Disable = m_sensorBypassStick.GetRawButton(kDisableExtra3);
+
 			//**********************************************************************************
 
 			//**********************************************************************************
 			// Lift Joystick
 			liftY = -m_controlStick.GetRawAxis(kLiftJoystickY);
 
-			if ((liftY > kBottomOfDeadBand) and (liftY < kTopOfDeadBand) )
+			if ((liftY > kBottomOfDeadBand) and (liftY < kTopOfDeadBand))
 				liftY = 0.0;
 
 			if (!bLiftTopLSDisable) {
@@ -426,10 +432,10 @@ public:
 			intakeX = -m_controlStick.GetRawAxis(kIntakeJoystickX);
 			intakeY = -m_controlStick.GetRawAxis(kIntakeJoystickY);
 
-			if ((intakeX > kBottomOfDeadBand) and (intakeX < kTopOfDeadBand) )
+			if ((intakeX > kBottomOfDeadBand) and (intakeX < kTopOfDeadBand))
 				intakeX = 0.0;
 
-			if ((intakeY > kBottomOfDeadBand) and (intakeY < kTopOfDeadBand) )
+			if ((intakeY > kBottomOfDeadBand) and (intakeY < kTopOfDeadBand))
 				intakeY = 0.0;
 
 			// Cube is contacting the left intake limit switch
@@ -454,9 +460,8 @@ public:
 
 			if ((passCount % numLoopsPerScan) == 0) {
 				if (servoAngle <= 80) {
-				  offsetVal = 1;
-				}
-				else if (servoAngle >= 120) {
+					offsetVal = 1;
+				} else if (servoAngle >= 120) {
 					offsetVal = -1;
 				}
 
@@ -475,95 +480,95 @@ public:
 private:
 
 	// CAN IDs  ****************************************************************
-    const static int kPdpCanAddress = 15;
-    const static int kPcmCanAddress = 1;
+	const static int kPdpCanAddress = 15;
+	const static int kPcmCanAddress = 1;
 
-    // Channels for the wheels  (CAN IDs)
-    const static int frontLeftChannel	= 3;
-    const static int frontRightChannel	= 6;
+	// Channels for the wheels  (CAN IDs)
+	const static int frontLeftChannel = 3;
+	const static int frontRightChannel = 6;
 
-    const static int rearLeftChannel	= 4;
-    const static int rearRightChannel	= 5;
+	const static int rearLeftChannel = 4;
+	const static int rearRightChannel = 5;
 
-    // End Effector
-    const static int kRightIntake		= 7;
-    const static int kLeftIntake		= 8;
-    const static int kSpareMC			= 9;
-    const static int kRightLift			= 10;
-    const static int kLeftLift			= 11;
-    // End CAN IDs *************************************************************
+	// End Effector
+	const static int kRightIntake = 7;
+	const static int kLeftIntake = 8;
+	const static int kSpareMC = 9;
+	const static int kRightLift = 10;
+	const static int kLeftLift = 11;
+	// End CAN IDs *************************************************************
 
-    // Solenoid Assignments
-    const static int backBarIn			= 0;  // Double
-    const static int backBarOut			= 1;  // Double
-    const static int liftLock			= 2;  // Double
-    const static int liftUnlock			= 3;  // Double
-    const static int deployIntake		= 4;  // single
-    const static int gripCube			= 5;  // single
-    const static int hook			    = 6;  // single
+	// Solenoid Assignments
+	const static int backBarIn = 0;  // Double
+	const static int backBarOut = 1;  // Double
+	const static int liftLock = 2;  // Double
+	const static int liftUnlock = 3;  // Double
+	const static int deployIntake = 4;  // single
+	const static int gripCube = 5;  // single
+	const static int hook = 6;  // single
 
-    // Analog Port assignments
-    const static int kRotarySw1Channel   = 0;
-    const static int kRotarySw2Channel   = 1;
-    const static int kRotarySw3Channel 	 = 2;
-    const static int kInfraredChannel	 = 3;
+	// Analog Port assignments
+	const static int kRotarySw1Channel = 0;
+	const static int kRotarySw2Channel = 1;
+	const static int kRotarySw3Channel = 2;
+	const static int kInfraredChannel = 3;
 
-    // Digital IOs
-    const static int kLeftIntakeLimitSw		= 0;
-    const static int kRightIntakeLimitSw	= 1;
-    const static int kLiftBottomLimitSw		= 2;
-    const static int kLiftTopLimitSw		= 3;
+	// Digital IOs
+	const static int kLeftIntakeLimitSw = 0;
+	const static int kRightIntakeLimitSw = 1;
+	const static int kLiftBottomLimitSw = 2;
+	const static int kLiftTopLimitSw = 3;
 
-    // Joystick port assignments
-    const static int kLeftDriverJoystick	= 0;
-    const static int kRightDriverJoystick	= 1;
-    const static int kDisableSwitchJoystick	= 2;
-    const static int kControlJoystick		= 3;
-    const static int kJoystickChannel4		= 4;
+	// Joystick port assignments
+	const static int kLeftDriverJoystick = 0;
+	const static int kRightDriverJoystick = 1;
+	const static int kDisableSwitchJoystick = 2;
+	const static int kControlJoystick = 3;
+	const static int kJoystickChannel4 = 4;
 
 	// Disable Sensor Switches (Generic USB Joystick)
-    const int kDeployGrabber	  	  = 12;
-    const int kDisableInfrared	  	  = 11;
-    const int kDisableRightEnc	  	  = 10;
-    const int kDisableLeftEnc	  	  = 9;
-    const int kDisableStringPot	  	  = 8;
-    const int kDisableLeftIntakeLS	  = 7;
-    const int kDisableRightIntakeLS	  = 6;
-    const int kDisableLiftTopLS	  	  = 5;
-    const int kDisableLiftBottomLS	  = 4;
-    const int kDisableExtra3	  	  = 3;
-    const int kDisableExtra2	  	  = 2;
-    const int kDisableExtra1	  	  = 1;
+	const int kDeployGrabber = 12;
+	const int kDisableInfrared = 11;
+	const int kDisableRightEnc = 10;
+	const int kDisableLeftEnc = 9;
+	const int kDisableStringPot = 8;
+	const int kDisableLeftIntakeLS = 7;
+	const int kDisableRightIntakeLS = 6;
+	const int kDisableLiftTopLS = 5;
+	const int kDisableLiftBottomLS = 4;
+	const int kDisableExtra3 = 3;
+	const int kDisableExtra2 = 2;
+	const int kDisableExtra1 = 1;
 
-    // Control Joystick inputs (UHID)
-    const int kGrabberEngage	  	  = 1;
-    const int kHookDeploy		  	  = 2;
-    const int kBackBarDeploy	  	  = 3;
+	// Control Joystick inputs (UHID)
+	const int kGrabberEngage = 1;
+	const int kHookDeploy = 2;
+	const int kBackBarDeploy = 3;
 
-    const int kLiftJoystickY		  = 4;  // Axis 4 Y
-    const int kLiftJoystickX		  = 5;  // Axis 5 X
-    const int kIntakeJoystickY		  = 1;  // Axis 1 Y
-    const int kIntakeJoystickX		  = 0;  // Axis 0 X
-    const int kSpeedPot				  = 2;  // Axis 2
+	const int kLiftJoystickY = 4;  // Axis 4 Y
+	const int kLiftJoystickX = 5;  // Axis 5 X
+	const int kIntakeJoystickY = 1;  // Axis 1 Y
+	const int kIntakeJoystickX = 0;  // Axis 0 X
+	const int kSpeedPot = 2;  // Axis 2
 
 #if talonSRXEncoders
 #endif
 
 #if roboRioEncoders
 	// only used if we bring encoder inputs back to roboRIO
-	const int	 kLeftEncoderAPin  = 4;
-	const int	 kLeftEncoderBPin  = 5;
-	const int	 kRightEncoderAPin = 6;
-	const int	 kRightEncoderBPin = 7;
+	const int kLeftEncoderAPin = 4;
+	const int kLeftEncoderBPin = 5;
+	const int kRightEncoderAPin = 6;
+	const int kRightEncoderBPin = 7;
 
 	// Quadrature Encoder related assignments
-	const int    kNumSamplesToAverage = 5;       // Samples per round range 1-255
-	const double kWheelRadius = 3.0;             // Radius in inches
-	const double kPulsesPerRevolution = 4096;    // PPR of encoder
-	const double k2Pi                 = 2.0 * 3.1415926; // 2 * Pi
-	const double kDistancePerPulse    =
-			 1.0 / (kPulsesPerRevolution * (k2Pi * kWheelRadius));
-	const double kMinRateNotStopped   = 1.0;
+	const int kNumSamplesToAverage = 5;// Samples per round range 1-255
+	const double kWheelRadius = 3.0;// Radius in inches
+	const double kPulsesPerRevolution = 4096;// PPR of encoder
+	const double k2Pi = 2.0 * 3.1415926;// 2 * Pi
+	const double kDistancePerPulse =
+	1.0 / (kPulsesPerRevolution * (k2Pi * kWheelRadius));
+	const double kMinRateNotStopped = 1.0;
 
 #endif
 
@@ -575,127 +580,129 @@ private:
 	const int kOversampleBits = 4;
 	const int kAverageBits = 4;
 
-
 	// Joystick deadband settings
 	const float kBottomOfDeadBand = -0.1;
-	const float kTopOfDeadBand    =  0.1;
+	const float kTopOfDeadBand = 0.1;
+
+	// Analog scaling factor
+	const double kVoltsPerAnalogDivision = 5.0 / 4096.0;
 
 	//***********************************************************************
 	// Miscellaneous Globals
-	int   autoLoopCounter;
+	int autoLoopCounter;
 	float gyroAngle;
 	//***********************************************************************
 
 	// Which Controls box are we dealing with?
 #if CNTL_BOX_A
-	WPI_VictorSPX *m_frontLeft   = new WPI_VictorSPX(frontLeftChannel);
-    WPI_VictorSPX *m_frontRight  = new WPI_VictorSPX(frontRightChannel);
+	WPI_VictorSPX *m_frontLeft = new WPI_VictorSPX(frontLeftChannel);
+	WPI_VictorSPX *m_frontRight = new WPI_VictorSPX(frontRightChannel);
 
 #if ON_ROBOT
-	WPI_TalonSRX  *m_rearLeft    = new WPI_TalonSRX(rearLeftChannel);
-    WPI_TalonSRX  *m_rearRight   = new WPI_TalonSRX(rearRightChannel);
+	WPI_TalonSRX *m_rearLeft = new WPI_TalonSRX(rearLeftChannel);
+	WPI_TalonSRX *m_rearRight = new WPI_TalonSRX(rearRightChannel);
 #endif
 
-    WPI_VictorSPX *m_rightIntake = new WPI_VictorSPX(kRightIntake);
-    WPI_VictorSPX *m_leftIntake  = new WPI_VictorSPX(kLeftIntake);
-    WPI_VictorSPX *m_spareMC     = new WPI_VictorSPX(kSpareMC);
-    WPI_VictorSPX *m_rightLift   = new WPI_VictorSPX(kRightLift);
-    WPI_VictorSPX *m_leftLift    = new WPI_VictorSPX(kLeftLift);
+	WPI_VictorSPX *m_rightIntake = new WPI_VictorSPX(kRightIntake);
+	WPI_VictorSPX *m_leftIntake = new WPI_VictorSPX(kLeftIntake);
+	WPI_VictorSPX *m_spareMC = new WPI_VictorSPX(kSpareMC);
+	WPI_VictorSPX *m_rightLift = new WPI_VictorSPX(kRightLift);
+	WPI_VictorSPX *m_leftLift = new WPI_VictorSPX(kLeftLift);
 
 	// Compressor channel -- not really needed but we'll keep it for completeness
-	Compressor  roboCompressor{kPcmCanAddress};
+	Compressor roboCompressor {kPcmCanAddress};
 
 #endif
 
-    // Object for dealing with the Power Distribution Panel (PDP).
-	PowerDistributionPanel m_pdp{kPdpCanAddress};
+	// Object for dealing with the Power Distribution Panel (PDP).
+	PowerDistributionPanel m_pdp { kPdpCanAddress };
 
 #if CNTL_BOX_B
-	WPI_VictorSPX *m_frontLeft   = new WPI_VictorSPX(frontLeftChannel);
-    WPI_VictorSPX *m_frontRight  = new WPI_VictorSPX(frontRightChannel);
+	WPI_VictorSPX *m_frontLeft = new WPI_VictorSPX(frontLeftChannel);
+	WPI_VictorSPX *m_frontRight = new WPI_VictorSPX(frontRightChannel);
 
 #if ON_ROBOT
-	WPI_TalonSRX  *m_rearLeft    = new WPI_TalonSRX(rearLeftChannel);
-    WPI_TalonSRX  *m_rearRight   = new WPI_TalonSRX(rearRightChannel);
+	WPI_TalonSRX *m_rearLeft = new WPI_TalonSRX(rearLeftChannel);
+	WPI_TalonSRX *m_rearRight = new WPI_TalonSRX(rearRightChannel);
 #endif
 
-    WPI_TalonSRX  *m_rightIntake = new WPI_TalonSRX(kRightIntake);
-    WPI_TalonSRX  *m_leftIntake  = new WPI_TalonSRX(kLeftIntake);
-    WPI_TalonSRX  *m_spareMC     = new WPI_TalonSRX(kSpareMC);
-    WPI_TalonSRX  *m_rightLift   = new WPI_TalonSRX(kRightLift);
-    WPI_TalonSRX  *m_leftLift    = new WPI_TalonSRX(kLeftLift);
+	WPI_TalonSRX *m_rightIntake = new WPI_TalonSRX(kRightIntake);
+	WPI_TalonSRX *m_leftIntake = new WPI_TalonSRX(kLeftIntake);
+	WPI_TalonSRX *m_spareMC = new WPI_TalonSRX(kSpareMC);
+	WPI_TalonSRX *m_rightLift = new WPI_TalonSRX(kRightLift);
+	WPI_TalonSRX *m_leftLift = new WPI_TalonSRX(kLeftLift);
 
 	// Compressor channel -- not really needed but we'll keep it for completeness
-	Compressor  roboCompressor{kPcmCanAddress};
+	Compressor roboCompressor { kPcmCanAddress };
 #endif
 
 	// Declare speed controller groups if we're on the robot
 #if ON_ROBOT
 	// Mobility SpeedControllerGroups
-    SpeedControllerGroup m_left{*m_frontLeft, *m_rearLeft};
-    SpeedControllerGroup m_right{*m_frontRight, *m_rearRight};
+	SpeedControllerGroup m_left { *m_frontLeft, *m_rearLeft };
+	SpeedControllerGroup m_right { *m_frontRight, *m_rearRight };
 
-    // Lift SpeedControllerGroup
-    SpeedControllerGroup m_lift{*m_leftLift, *m_rightLift};
+	// Lift SpeedControllerGroup
+	SpeedControllerGroup m_lift { *m_leftLift, *m_rightLift };
 
 #else
-    SpeedControllerGroup m_left{*m_frontLeft};
-    SpeedControllerGroup m_right{*m_frontRight};
+	SpeedControllerGroup m_left {*m_frontLeft};
+	SpeedControllerGroup m_right {*m_frontRight};
 #endif
 
-    // Tell WPIlib that we're Tank drive
-    DifferentialDrive m_robotDrive{m_left, m_right};
+	// Tell WPIlib that we're Tank drive
+	DifferentialDrive m_robotDrive { m_left, m_right };
 
 #if XBOX_CONTROLLER
-    // Joysticks
-	XboxController m_stick{kLeftDriverJoystick};
+	// Joysticks
+	XboxController m_stick {kLeftDriverJoystick};
 #endif
 
 #if DUAL_JOYSTICKS
-    // Joysticks
-	Joystick m_stickL{kLeftDriverJoystick};
-	Joystick m_stickR{kRightDriverJoystick};
+	// Joysticks
+	Joystick m_stickL { kLeftDriverJoystick };
+	Joystick m_stickR { kRightDriverJoystick };
 #endif
 
 #if OI_ENABLED
-	Joystick m_sensorBypassStick{kDisableSwitchJoystick};
-	Joystick m_controlStick{kControlJoystick};
+	Joystick m_sensorBypassStick { kDisableSwitchJoystick };
+	Joystick m_controlStick { kControlJoystick };
 #endif
 
 	// Instantiate the Analog Inputs
-	AnalogInput m_autoSwitch1{kRotarySw1Channel};
-	AnalogInput m_autoSwitch2{kRotarySw2Channel};
-	AnalogInput m_autoSwitch3{kRotarySw3Channel};
-	AnalogInput m_infraredDistance{kInfraredChannel};
+	AnalogInput m_autoSwitch1 { kRotarySw1Channel };
+	AnalogInput m_autoSwitch2 { kRotarySw2Channel };
+	AnalogInput m_autoSwitch3 { kRotarySw3Channel };
+	AnalogInput m_infraredDistance { kInfraredChannel };
 
 	// Instantiate the Digital IOs
-	DigitalInput  m_leftIntakeLimitSwitch{kLeftIntakeLimitSw};
-	DigitalInput  m_rightIntakeLimitSwitch{kRightIntakeLimitSw};
-	DigitalInput  m_atLiftTop{kLiftTopLimitSw};
-	DigitalInput  m_atLiftBottom{kLiftBottomLimitSw};
+	DigitalInput m_leftIntakeLimitSwitch { kLeftIntakeLimitSw };
+	DigitalInput m_rightIntakeLimitSwitch { kRightIntakeLimitSw };
+	DigitalInput m_atLiftTop { kLiftTopLimitSw };
+	DigitalInput m_atLiftBottom { kLiftBottomLimitSw };
 
 	// Pneumatics
-	DoubleSolenoid backBar{kPcmCanAddress, backBarIn, backBarOut};
-	DoubleSolenoid liftLocker{kPcmCanAddress, liftLock, liftUnlock};
-	Solenoid 	   gripper{kPcmCanAddress, gripCube};
-	Solenoid	   intakeDeploy{kPcmCanAddress, deployIntake};
-	Solenoid	   engageHook{kPcmCanAddress, hook};
+	DoubleSolenoid backBar { kPcmCanAddress, backBarIn, backBarOut };
+	DoubleSolenoid liftLocker { kPcmCanAddress, liftLock, liftUnlock };
+	Solenoid gripper { kPcmCanAddress, gripCube };
+	Solenoid intakeDeploy { kPcmCanAddress, deployIntake };
+	Solenoid engageHook { kPcmCanAddress, hook };
 
 #if talonSRXEncoders
 #endif
 
 #if roboRioEncoders
 	// Quadrature Encoders on RoboRio
-	Encoder m_rightEncoder{kLeftEncoderAPin,  kLeftEncoderBPin,  false, Encoder::k4X};
+	Encoder m_rightEncoder {kLeftEncoderAPin, kLeftEncoderBPin, false, Encoder::k4X};
 	Encoder m_leftEncoder {kRightEncoderAPin, kRightEncoderBPin, false, Encoder::k4X};
 #endif
 
 #if USE_NAVX
 	// Declare the NAVX
-    AHRS *ahrs;
+	AHRS *ahrs;
 
-    // Network Tables Crap used by NAVX
-	std::shared_ptr<NetworkTable> table{NULL};
+	// Network Tables Crap used by NAVX
+	std::shared_ptr<NetworkTable> table {NULL};
 
 #endif
 
@@ -703,9 +710,9 @@ private:
 	frc::SendableChooser<std::string> m_chooser;
 	const std::string kAutoNameDoNothing = "Do Nothing";
 	const std::string kAutoCrossAutoLine = "Cross Auto Line";
-	const std::string kAutoSwitchCube    = "Place Cube on Switch";
-	const std::string kAutoScaleCube     = "Place Cube on Scale";
-	const std::string kAutoSecondCube    = "Acquire Second Cube";
+	const std::string kAutoSwitchCube = "Place Cube on Switch";
+	const std::string kAutoScaleCube = "Place Cube on Scale";
+	const std::string kAutoSecondCube = "Acquire Second Cube";
 
 	std::string m_autoSelected;
 };
