@@ -251,7 +251,6 @@ public:
 		bool   bExtra2Disable       = false;
 		bool   bExtra3Disable       = false;
 
-
 		while (IsOperatorControl()) {
 
 #if talonSRXEncoders
@@ -363,24 +362,12 @@ public:
 #if OI_ENABLED
 
 			// pneumatics
-			if (m_sensorBypassStick.GetRawButton(kDeployGrabber)) {
-				intakeDeploy.Set(true);
-			} else {
-				intakeDeploy.Set(false);
-			}
+			// Singles
+			intakeDeploy.Set(m_sensorBypassStick.GetRawButton(kDeployGrabber));
+			gripper.Set(m_controlStick.GetRawButton(kGrabberEngage));
+			engageHook.Set(m_controlStick.GetRawButton(kHookDeploy));
 
-			if (m_controlStick.GetRawButton(kGrabberEngage)) {
-				gripper.Set(true);
-			} else {
-				gripper.Set(false);
-			}
-
-			if (m_controlStick.GetRawButton(kHookDeploy)) {
-				engageHook.Set(true);
-			} else {
-				engageHook.Set(false);
-			}
-
+			// Doubles
 			if (m_controlStick.GetRawButton(kBackBarDeploy)) {
 				backBar.Set(DoubleSolenoid::kForward);
 			} else {
@@ -393,69 +380,37 @@ public:
 				liftLocker.Set(DoubleSolenoid::kReverse);
 			}
 
+			//**********************************************************************************
 			// Sensor disables
-			if (m_sensorBypassStick.GetRawButton(kDisableInfrared)) {
+			if (!m_sensorBypassStick.GetRawButton(kDisableInfrared)) {
 				infraredDistance = getInfraredDistance(kInfraredChannel);
 			} else {
 				infraredDistance = 0.0;
 			}
 
-			if (m_sensorBypassStick.GetRawButton(kDisableLiftBottomLS)) {
-				bLiftBottomLSDisable = true;
-			} else {
-				bLiftBottomLSDisable = false;
-			}
+			bLiftBottomLSDisable = m_sensorBypassStick.GetRawButton(kDisableLiftBottomLS);
+			bLiftTopLSDisable    = m_sensorBypassStick.GetRawButton(kDisableLiftTopLS);
+			bRtIntakeLSDisable   = m_sensorBypassStick.GetRawButton(kDisableRightIntakeLS);
+			bLftIntakeLSDisable  = m_sensorBypassStick.GetRawButton(kDisableLeftIntakeLS);
+			bRtEncDisable        = m_sensorBypassStick.GetRawButton(kDisableRightEnc);
+			bLftEncDisable       = m_sensorBypassStick.GetRawButton(kDisableLeftEnc);
+			bStringPotDisable    = m_sensorBypassStick.GetRawButton(kDisableStringPot);
+			//**********************************************************************************
 
-			if (m_sensorBypassStick.GetRawButton(kDisableLiftTopLS)) {
-				bLiftTopLSDisable = true;
-			} else {
-				bLiftTopLSDisable = false;
-			}
-
-			if (m_sensorBypassStick.GetRawButton(kDisableRightIntakeLS)) {
-				bRtIntakeLSDisable = true;
-			} else {
-				bRtIntakeLSDisable = false;
-			}
-
-			if (m_sensorBypassStick.GetRawButton(kDisableLeftIntakeLS)) {
-				bLftIntakeLSDisable = true;
-			} else {
-				bLftIntakeLSDisable = false;
-			}
-
-			if (m_sensorBypassStick.GetRawButton(kDisableRightEnc)) {
-				bRtEncDisable = true;
-			} else {
-				bRtEncDisable = false;
-			}
-
-			if (m_sensorBypassStick.GetRawButton(kDisableLeftEnc)) {
-				bLftEncDisable = true;
-			} else {
-				bLftEncDisable = false;
-			}
-
-			if (m_sensorBypassStick.GetRawButton(kDisableStringPot)) {
-				bStringPotDisable = true;
-			} else {
-				bStringPotDisable = false;
-			}
-
-			//******************************************************************
+			//**********************************************************************************
 			// Lift Joystick
 			liftY = -m_controlStick.GetRawAxis(kLiftJoystickY);
 
 			if ((liftY > kBottomOfDeadBand) and (liftY < kTopOfDeadBand) )
 				liftY = 0.0;
 
-			if (!m_sensorBypassStick.GetRawButton(kDisableLiftTopLS)) {
+			if (!bLiftTopLSDisable) {
 				if (m_atLiftTop.Get()) {
 					// stop the Lift
 					liftY = 0.0;
 				}
 			}
-			if (!m_sensorBypassStick.GetRawButton(kDisableLiftBottomLS)) {
+			if (!bLiftBottomLSDisable) {
 				if (m_atLiftBottom.Get()) {
 					// stop the Lift
 					liftY = 0.0;
@@ -464,9 +419,9 @@ public:
 			// Make it so....
 			m_lift.Set(liftY);
 
-			//******************************************************************
+			//**********************************************************************************
 
-			//******************************************************************
+			//**********************************************************************************
 			// Intake Subsystem
 			intakeX = -m_controlStick.GetRawAxis(kIntakeJoystickX);
 			intakeY = -m_controlStick.GetRawAxis(kIntakeJoystickY);
@@ -492,7 +447,7 @@ public:
 			m_rightIntake->Set(intakeX);
 			m_leftIntake->Set(intakeY);
 
-			//******************************************************************
+			//**********************************************************************************
 
 #endif
 			passCount++;
