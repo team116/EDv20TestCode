@@ -222,6 +222,13 @@ public:
 	void TeleopInit() {
 	}
 
+	double getInfraredDistance (int analogChannel) {
+		double distance;
+
+		distance = 0.0;
+		return (distance);
+	}
+
 	void TeleopPeriodic() {
 		int offsetVal = 1;
 		int servoAngle = 80;
@@ -232,6 +239,18 @@ public:
 		double liftY = 0.0;
 		double intakeY = 0.0;
 		double intakeX = 0.0;
+		double infraredDistance = 0.0;
+		bool   bRtEncDisable        = false;
+		bool   bLftEncDisable       = false;
+		bool   bStringPotDisable    = false;
+		bool   bRtIntakeLSDisable   = false;
+		bool   bLftIntakeLSDisable  = false;
+		bool   bLiftTopLSDisable    = false;
+		bool   bLiftBottomLSDisable = false;
+		bool   bExtra1Disable       = false;
+		bool   bExtra2Disable       = false;
+		bool   bExtra3Disable       = false;
+
 
 		while (IsOperatorControl()) {
 
@@ -374,6 +393,55 @@ public:
 				liftLocker.Set(DoubleSolenoid::kReverse);
 			}
 
+			// Sensor disables
+			if (m_sensorBypassStick.GetRawButton(kDisableInfrared)) {
+				infraredDistance = getInfraredDistance(kInfraredChannel);
+			} else {
+				infraredDistance = 0.0;
+			}
+
+			if (m_sensorBypassStick.GetRawButton(kDisableLiftBottomLS)) {
+				bLiftBottomLSDisable = true;
+			} else {
+				bLiftBottomLSDisable = false;
+			}
+
+			if (m_sensorBypassStick.GetRawButton(kDisableLiftTopLS)) {
+				bLiftTopLSDisable = true;
+			} else {
+				bLiftTopLSDisable = false;
+			}
+
+			if (m_sensorBypassStick.GetRawButton(kDisableRightIntakeLS)) {
+				bRtIntakeLSDisable = true;
+			} else {
+				bRtIntakeLSDisable = false;
+			}
+
+			if (m_sensorBypassStick.GetRawButton(kDisableLeftIntakeLS)) {
+				bLftIntakeLSDisable = true;
+			} else {
+				bLftIntakeLSDisable = false;
+			}
+
+			if (m_sensorBypassStick.GetRawButton(kDisableRightEnc)) {
+				bRtEncDisable = true;
+			} else {
+				bRtEncDisable = false;
+			}
+
+			if (m_sensorBypassStick.GetRawButton(kDisableLeftEnc)) {
+				bLftEncDisable = true;
+			} else {
+				bLftEncDisable = false;
+			}
+
+			if (m_sensorBypassStick.GetRawButton(kDisableStringPot)) {
+				bStringPotDisable = true;
+			} else {
+				bStringPotDisable = false;
+			}
+
 			//******************************************************************
 			// Lift Joystick
 			liftY = -m_controlStick.GetRawAxis(kLiftJoystickY);
@@ -480,10 +548,10 @@ private:
     const static int hook			    = 6;  // single
 
     // Analog Port assignments
-    const static int rotarySw1   = 0;
-    const static int rotarySw2   = 1;
-    const static int rotarySw3 	 = 2;
-    const static int infrared	 = 3;
+    const static int kRotarySw1Channel   = 0;
+    const static int kRotarySw2Channel   = 1;
+    const static int kRotarySw3Channel 	 = 2;
+    const static int kInfraredChannel	 = 3;
 
     // Digital IOs
     const static int kLeftIntakeLimitSw		= 0;
@@ -640,10 +708,10 @@ private:
 #endif
 
 	// Instantiate the Analog Inputs
-	AnalogInput m_autoSwitch1{rotarySw1};
-	AnalogInput m_autoSwitch2{rotarySw2};
-	AnalogInput m_autoSwitch3{rotarySw3};
-	AnalogInput m_infraredDistance{infrared};
+	AnalogInput m_autoSwitch1{kRotarySw1Channel};
+	AnalogInput m_autoSwitch2{kRotarySw2Channel};
+	AnalogInput m_autoSwitch3{kRotarySw3Channel};
+	AnalogInput m_infraredDistance{kInfraredChannel};
 
 	// Instantiate the Digital IOs
 	DigitalInput  m_leftIntakeLimitSwitch{kLeftIntakeLimitSw};
