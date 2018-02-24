@@ -238,8 +238,8 @@ public:
 		double intakeY = 0.0;
 		double intakeX = 0.0;
 		double infraredDistance = 0.0;
-		bool bRtEncDisable = false;
-		bool bLftEncDisable = false;
+		bool bRightEncoderDisable = false;
+		bool bLeftEncoderDisable = false;
 		bool bStringPotDisable = false;
 		bool bRtIntakeLSDisable = false;
 		bool bLftIntakeLSDisable = false;
@@ -385,21 +385,28 @@ public:
 				infraredDistance = 0.0;
 			}
 
-			bLiftBottomLSDisable = m_sensorBypassStick.GetRawButton(
-					kDisableLiftBottomLS);
-			bLiftTopLSDisable = m_sensorBypassStick.GetRawButton(
-					kDisableLiftTopLS);
-			bRtIntakeLSDisable = m_sensorBypassStick.GetRawButton(
-					kDisableRightIntakeLS);
-			bLftIntakeLSDisable = m_sensorBypassStick.GetRawButton(
-					kDisableLeftIntakeLS);
-			bRtEncDisable = m_sensorBypassStick.GetRawButton(kDisableRightEnc);
-			bLftEncDisable = m_sensorBypassStick.GetRawButton(kDisableLeftEnc);
-			bStringPotDisable = m_sensorBypassStick.GetRawButton(
-					kDisableStringPot);
-			bExtra1Disable = m_sensorBypassStick.GetRawButton(kDisableExtra1);
-			bExtra2Disable = m_sensorBypassStick.GetRawButton(kDisableExtra2);
-			bExtra3Disable = m_sensorBypassStick.GetRawButton(kDisableExtra3);
+			bLiftBottomLSDisable = m_sensorBypassStick.GetRawButton(kDisableLiftBottomLS);
+			bLiftTopLSDisable    = m_sensorBypassStick.GetRawButton(kDisableLiftTopLS);
+			bRtIntakeLSDisable   = m_sensorBypassStick.GetRawButton(kDisableRightIntakeLS);
+			bLftIntakeLSDisable  = m_sensorBypassStick.GetRawButton(kDisableLeftIntakeLS);
+			bRightEncoderDisable = m_sensorBypassStick.GetRawButton(kDisableRightEnc);
+			bLeftEncoderDisable  = m_sensorBypassStick.GetRawButton(kDisableLeftEnc);
+			bStringPotDisable    = m_sensorBypassStick.GetRawButton(kDisableStringPot);
+			bExtra1Disable       = m_sensorBypassStick.GetRawButton(kDisableExtra1);
+			bExtra2Disable       = m_sensorBypassStick.GetRawButton(kDisableExtra2);
+			bExtra3Disable       = m_sensorBypassStick.GetRawButton(kDisableExtra3);
+
+			//**********************************************************************************
+
+			//**********************************************************************************
+			// Mobility movement
+			if (!bRightEncoderDisable) {
+
+			}
+
+			if (!bLeftEncoderDisable) {
+
+			}
 
 			//**********************************************************************************
 
@@ -438,17 +445,22 @@ public:
 			if ((intakeY > kBottomOfDeadBand) and (intakeY < kTopOfDeadBand))
 				intakeY = 0.0;
 
-			// Cube is contacting the left intake limit switch
-			if (m_leftIntake->Get()) {
-				intakeX = 0.0;
-			}
-			// Cube is contacting the right intake limit switch
-			if (m_rightIntake->Get()) {
-				intakeY = 0.0;
-			}
-
 			// TODO: Figure out the mixing for the Intake Joystick
 			//if ()
+
+			// Is Cube contacting the left intake limit switch?
+			if (!bLftIntakeLSDisable) {
+				if (m_leftIntakeLimitSwitch.Get()) {
+					intakeX = 0.0;
+				}
+			}
+			// Is Cube contacting the right intake limit switch?
+			if (!bRtIntakeLSDisable) {
+				if (m_rightIntakeLimitSwitch.Get()) {
+					intakeY = 0.0;
+				}
+			}
+
 			// Make it so....
 			m_rightIntake->Set(intakeX);
 			m_leftIntake->Set(intakeY);
