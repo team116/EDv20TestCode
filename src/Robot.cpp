@@ -221,9 +221,9 @@ public:
 	}
 
 	double getInfraredDistance(int analogChannel) {
-		double distance;
+		double distance =0.0;
 
-		distance = 0.0;
+
 		return (distance);
 	}
 
