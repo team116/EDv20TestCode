@@ -34,8 +34,8 @@
 #define roboRioEncoders 	false
 #define talonSRXEncoders 	false
 #define USE_NAVX   			false
-#define CNTL_BOX_A 			false
-#define CNTL_BOX_B 			true
+#define CNTL_BOX_A 			true
+#define CNTL_BOX_B 			false
 #define	ON_ROBOT   			true
 #define ENABLE_USB_CAMERA	false
 #define DUAL_JOYSTICKS		true
@@ -73,8 +73,8 @@ public:
 		m_autoSwitch1.SetAverageBits(kAverageBits);
 		m_autoSwitch2.SetOversampleBits(kOversampleBits);
 		m_autoSwitch2.SetAverageBits(kAverageBits);
-		m_autoSwitch3.SetOversampleBits(kOversampleBits);
-		m_autoSwitch3.SetAverageBits(kAverageBits);
+		m_liftHeight.SetOversampleBits(kOversampleBits);
+		m_liftHeight.SetAverageBits(kAverageBits);
 		m_infraredDistance.SetOversampleBits(kOversampleBits);
 		m_infraredDistance.SetAverageBits(kAverageBits);
 
@@ -164,15 +164,18 @@ public:
 		gameData = frc::DriverStation::GetInstance().GetGameSpecificMessage();
 
 		if (gameData.length() > 0) {
-			if (gameData[0] == 'L') {
-				DriverStation::ReportError("Switch is on the left");
+			cSwitchVal   = gameData[0];
+			cScaleVal    = gameData[1];
+			cOppositeVal = gameData[2];
+			if (cSwitchVal == 'L') {
+				DriverStation::ReportWarning("Switch is on the left");
 			} else {
-				DriverStation::ReportError("Switch is on the right");
+				DriverStation::ReportWarning("Switch is on the right");
 			}
-			if (gameData[1] == 'L') {
-				DriverStation::ReportError("Scale is on the left");
+			if (cScaleVal == 'L') {
+				DriverStation::ReportWarning("Scale is on the left");
 			} else {
-				DriverStation::ReportError("Scale is on the right");
+				DriverStation::ReportWarning("Scale is on the right");
 			}
 		}
 
@@ -409,6 +412,11 @@ public:
 			}
 
 			//**********************************************************************************
+			if (!bStringPotDisable) {
+				dLiftHeight = m_liftHeight.GetVoltage();
+				// TODO: Calculate the height from the voltage
+			}
+			//**********************************************************************************
 
 			//**********************************************************************************
 			// Lift Joystick
@@ -430,6 +438,7 @@ public:
 				}
 			}
 			// Make it so....
+
 			m_lift.Set(liftY);
 
 
@@ -492,7 +501,12 @@ public:
 
 private:
 
+	// Character arrays
 	char buffer[255];
+	char cSwitchVal = ' ';
+	char cScaleVal = ' ';
+	char cOppositeVal = ' ';
+
 
 	// CAN IDs  ****************************************************************
 	const static int kPdpCanAddress = 15;
@@ -525,7 +539,7 @@ private:
 	// Analog Port assignments
 	const static int kRotarySw1Channel = 0;
 	const static int kRotarySw2Channel = 1;
-	const static int kRotarySw3Channel = 2;
+	const static int kLiftHightChannel = 2;
 	const static int kInfraredChannel = 3;
 
 	// Digital IOs
@@ -602,6 +616,9 @@ private:
 	// Analog scaling factor
 	const double kVoltsPerAnalogDivision = 5.0 / 4096.0;
 
+	// Height of the elevator
+	double dLiftHeight = 0.0;
+
 	//***********************************************************************
 	// Miscellaneous Globals
 	int autoLoopCounter;
@@ -623,6 +640,10 @@ private:
 	WPI_VictorSPX *m_spareMC = new WPI_VictorSPX(kSpareMC);
 	WPI_VictorSPX *m_rightLift = new WPI_VictorSPX(kRightLift);
 	WPI_VictorSPX *m_leftLift = new WPI_VictorSPX(kLeftLift);
+
+	// Lift SpeedControllerGroup
+	SpeedControllerGroup m_lift { *m_leftLift, *m_rightLift };
+
 
 	// Compressor channel -- not really needed but we'll keep it for completeness
 	Compressor roboCompressor {kPcmCanAddress};
@@ -657,9 +678,6 @@ private:
 	SpeedControllerGroup m_left { *m_frontLeft, *m_rearLeft };
 	SpeedControllerGroup m_right { *m_frontRight, *m_rearRight };
 
-	// Lift SpeedControllerGroup
-	SpeedControllerGroup m_lift { *m_leftLift, *m_rightLift };
-
 #else
 	SpeedControllerGroup m_left {*m_frontLeft};
 	SpeedControllerGroup m_right {*m_frontRight};
@@ -687,7 +705,7 @@ private:
 	// Instantiate the Analog Inputs
 	AnalogInput m_autoSwitch1 { kRotarySw1Channel };
 	AnalogInput m_autoSwitch2 { kRotarySw2Channel };
-	AnalogInput m_autoSwitch3 { kRotarySw3Channel };
+	AnalogInput m_liftHeight { kLiftHightChannel };
 	AnalogInput m_infraredDistance { kInfraredChannel };
 
 	// Instantiate the Digital IOs
