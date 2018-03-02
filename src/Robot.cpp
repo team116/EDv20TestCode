@@ -66,7 +66,8 @@ public:
 		backBar.Set(DoubleSolenoid::kReverse);
 		liftLocker.Set(DoubleSolenoid::kReverse);
 		gripper.Set(false);
-		intakeDeploy.Set(false);
+//		intakeDeploy.Set(false);
+		intakeDeploy.Set(DoubleSolenoid::kReverse);
 		engageHook.Set(false);
 
 		m_autoSwitch1.SetOversampleBits(kOversampleBits);
@@ -358,11 +359,17 @@ public:
 
 			// pneumatics
 			// Singles
-			intakeDeploy.Set(m_sensorBypassStick.GetRawButton(kDeployGrabber));
+//			intakeDeploy.Set(m_sensorBypassStick.GetRawButton(kDeployGrabber));
 			gripper.Set(m_controlStick.GetRawButton(kGrabberEngage));
 			engageHook.Set(m_controlStick.GetRawButton(kHookDeploy));
 
 			// Doubles
+			if (m_sensorBypassStick.GetRawButton(kDeployGrabber)) {
+				intakeDeploy.Set(DoubleSolenoid::kForward);
+			} else {
+				intakeDeploy.Set(DoubleSolenoid::kReverse);
+			}
+
 			if (m_controlStick.GetRawButton(kBackBarDeploy)) {
 				backBar.Set(DoubleSolenoid::kForward);
 			} else {
@@ -531,6 +538,7 @@ private:
 	const static int deployIntake = 4;  // single
 	const static int gripCube = 5;  // single
 	const static int hook = 6;  // single
+	const static int dummy = 7;
 
 	// Analog Port assignments
 	const static int kRotarySw1Channel = 0;
@@ -715,7 +723,7 @@ private:
 	DoubleSolenoid backBar { kPcmCanAddress, backBarIn, backBarOut };
 	DoubleSolenoid liftLocker { kPcmCanAddress, liftLock, liftUnlock };
 	Solenoid gripper { kPcmCanAddress, gripCube };
-	Solenoid intakeDeploy { kPcmCanAddress, deployIntake };
+	DoubleSolenoid intakeDeploy { kPcmCanAddress, deployIntake,  dummy};
 	Solenoid engageHook { kPcmCanAddress, hook };
 
 #if talonSRXEncoders
