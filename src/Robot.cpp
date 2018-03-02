@@ -374,11 +374,12 @@ public:
 				backBar.Set(DoubleSolenoid::kReverse);
 			}
 
-			if (m_controlStick.GetRawButton(kHookDeploy)) {
+			if (m_controlStick.GetRawButton(kLiftLockEngage)) {
 				liftLocker.Set(DoubleSolenoid::kForward);
-			} else {
+			}  else {
 				liftLocker.Set(DoubleSolenoid::kReverse);
 			}
+
 
 			//**********************************************************************************
 			// Sensor disables
@@ -573,6 +574,7 @@ private:
 	const int kGrabberEngage = 1;
 	const int kHookDeploy = 2;
 	const int kBackBarDeploy = 3;
+	const int kLiftLockEngage = 4;
 
 	const int kLiftJoystickY = 4;  // Axis 4 Y
 	const int kLiftJoystickX = 5;  // Axis 5 X
