@@ -36,7 +36,7 @@
 #define USE_NAVX   			false
 #define CNTL_BOX_A 			true
 #define CNTL_BOX_B 			false
-#define	ON_ROBOT   			true
+#define	ON_ROBOT   			false
 #define ENABLE_USB_CAMERA	false
 #define DUAL_JOYSTICKS		true
 #define XBOX_CONTROLLER		false
@@ -78,12 +78,6 @@ public:
 		m_infraredDistance.SetOversampleBits(kOversampleBits);
 		m_infraredDistance.SetAverageBits(kAverageBits);
 
-		// Set initial angle on servo
-//		ultrasonicServo.SetAngle(90);
-
-// Gyro calibration
-//		analogGyro.Calibrate();
-//		analogGyro.Reset();
 
 #if ENABLE_USB_CAMERA
 		// enable camera
@@ -255,6 +249,7 @@ public:
 		while (IsOperatorControl()) {
 
 #if talonSRXEncoders
+
 #endif
 
 #if roboRioEncoders
