@@ -36,8 +36,8 @@
 #define USE_NAVX   			false
 #define CNTL_BOX_A 			true
 #define CNTL_BOX_B 			false
-#define	ON_ROBOT   			false
-#define ENABLE_USB_CAMERA	false
+#define	ON_ROBOT   			true
+#define ENABLE_USB_CAMERA	true
 #define DUAL_JOYSTICKS		true
 #define XBOX_CONTROLLER		false
 #define OI_ENABLED			true
@@ -54,9 +54,12 @@ using namespace nt;
 class Robot: public frc::IterativeRobot {
 
 public:
+	enum AutoLocation {Left, Middle, Right};
+	enum AutoPlay {doNothing, crossAutoLine, depressSwitch, depressScale};
+
 	void RobotInit() {
 		m_chooser.AddDefault(kAutoNameDoNothing, kAutoNameDoNothing);
-//		m_chooser.AddObject(kAutoNameCustom, kAutoNameCustom);
+		//		m_chooser.AddObject(kAutoNameCustom, kAutoNameCustom);
 		SmartDashboard::PutData("Auto Modes", &m_chooser);
 
 		// Pneumatics
@@ -66,7 +69,7 @@ public:
 		backBar.Set(DoubleSolenoid::kReverse);
 		liftLocker.Set(DoubleSolenoid::kReverse);
 		gripper.Set(false);
-//		intakeDeploy.Set(false);
+		//		intakeDeploy.Set(false);
 		intakeDeploy.Set(DoubleSolenoid::kReverse);
 		engageHook.Set(false);
 
@@ -78,6 +81,11 @@ public:
 		m_liftHeight.SetAverageBits(kAverageBits);
 		m_infraredDistance.SetOversampleBits(kOversampleBits);
 		m_infraredDistance.SetAverageBits(kAverageBits);
+
+		delay_timer = new Timer();
+		move_forward_timer = new Timer();
+		lift_timer = new Timer();
+		turn_timer = new Timer();
 
 
 #if ENABLE_USB_CAMERA
@@ -140,6 +148,42 @@ public:
 #endif
 	}
 
+	int ConvertPlayFromVoltage(double voltage) {
+		int retVal = 0;
+
+		if ((voltage > 0.0005) and (voltage < 0.2)) {
+			retVal = 0;
+		}
+		if ((voltage > 0.92) and (voltage < 1.2)) {
+			retVal = 1;
+		}
+		if ((voltage > 1.92) and (voltage < 2.2)) {
+			retVal = 2;
+		}
+		if ((voltage > 2.92) and (voltage < 3.2)) {
+			retVal = 3;
+		}
+
+		return retVal;
+	}
+
+	//need to still match these up with the second dial
+	int ConvertPositionFromVoltage(double voltage) {
+		int retVal = 0;
+
+		if ((voltage > 0.0005) and (voltage < 0.2)) {
+			retVal = 0;
+		}
+		if ((voltage > 0.92) and (voltage < 1.2)) {
+			retVal = 1;
+		}
+		if ((voltage > 1.92) and (voltage < 2.2)) {
+			retVal = 2;
+		}
+
+		return retVal;
+	}
+
 	/*
 	 * This autonomous (along with the chooser code above) shows how to
 	 * select
@@ -155,8 +199,34 @@ public:
 	 * well.
 	 */
 	void AutonomousInit() override {
+		delay_timer->Reset();
+		move_forward_timer->Reset();
+		turn_timer->Reset();
+		lift_timer->Reset();
+
+		finishedLifting = false;
+		startedLifting = false;
+
 		std::string gameData;
 		gameData = frc::DriverStation::GetInstance().GetGameSpecificMessage();
+
+		double playSwitchVoltage = m_autoSwitch1.GetVoltage();
+		double positionSwitchVoltage = m_autoSwitch2.GetVoltage();
+
+		play = ConvertPlayFromVoltage(playSwitchVoltage);
+		position = ConvertPositionFromVoltage(positionSwitchVoltage);
+
+		sprintf(buffer, "Play: %d\n", play);
+		DriverStation::ReportWarning(buffer);
+
+		sprintf(buffer, "Position: %d\n", position);
+		DriverStation::ReportWarning(buffer);
+
+		//put arms up
+		//gripper.Set(m_controlStick.GetRawButton(kGrabberEngage));
+
+		//stop backbar from swinging
+		//backBar.Set(DoubleSolenoid::kOff);	//needs to be tested, kOff, try reverse of what the switch does
 
 		if (gameData.length() > 0) {
 			cSwitchVal   = gameData[0];
@@ -175,44 +245,151 @@ public:
 		}
 
 		autoLoopCounter = 0;
+		step = 0;
 		m_autoSelected = m_chooser.GetSelected();
 		// m_autoSelected = SmartDashboard::GetString(
 		// 		"Auto Selector", kAutoNameDefault);
 		std::cout << "Auto selected: " << m_autoSelected << std::endl;
 
-//		if (m_autoSelected == kAutoNameCustom) {
-//			// Custom Auto goes here
-//		} else {
-//			// Default Auto goes here
-//		}
+		//		if (m_autoSelected == kAutoNameCustom) {
+		//			// Custom Auto goes here
+		//		} else {
+		//			// Default Auto goes here
+		//		}
 	}
 
 	void AutonomousPeriodic() {
-//		if (m_autoSelected == kAutoNameCustom) {
-		// Custom Auto goes here
-//			if(autoLoopCounter < 100) //Check if we've completed 100 loops (approximately 2 seconds)
-//			{
-//				gyroAngle = analogGyro.GetAngle();
-//				// Do something w/ the Angle
-//				m_robotDrive.ArcadeDrive(-0.5, -gyroAngle * Kp); 	// drive forwards half speed
 
-//				autoLoopCounter++;
-//				} else {
-//					m_robotDrive.ArcadeDrive(0.0, 0.0); 	// stop robot
-//			}
-//		} else {
+		// Lift was incorrect direction, but probably don't need to do
+		/*
+		if (!finishedLifting){
+			if (!startedLifting) {
+				lift_timer->Start();
+				m_lift.Set(0.5);
+				startedLifting = true;
+				DriverStation::ReportWarning("Raising lift");
+			}
+			if (lift_timer->HasPeriodPassed(.5)) {
+				finishedLifting = true;
+				DriverStation::ReportWarning("Lift is up");
+			}
+
+			return; // DO NOTHING ELSE UNTIL THIS IS COMPLETED!!!!
+		}
+		*/
+
+
+		if (play == 0) {  // Play 0 is DO NOTHING
+			DriverStation::ReportWarning("Doing nothing");
+			return;
+		}
+		else if ((play == 1) || (play == 2)) {   // Play 1 is CROSS AUTO LINE
+			switch (step) {
+				case 0:
+					delay_timer->Start();
+					DriverStation::ReportWarning("Starting delay timer");
+					step = 1;
+					break;
+				case 1:
+					if (delay_timer->HasPeriodPassed(2.0)) {  // 2 second delay
+						delay_timer->Stop();
+						DriverStation::ReportWarning("Delay timer stopped");
+						step = 2;
+					}
+					break;
+				case 2:
+					move_forward_timer->Start();
+					if ((position == 1)) {
+						m_robotDrive.TankDrive(.35, .25);
+						DriverStation::ReportWarning("Veering right");
+					}
+					else {
+						m_robotDrive.TankDrive(.5, .5);
+						DriverStation::ReportWarning("Driving forward");
+					}
+					step = 3;
+
+					break;
+				case 3:
+					if (move_forward_timer->HasPeriodPassed(7.0)) {
+						m_robotDrive.TankDrive(0.0, 0.0);
+						move_forward_timer->Stop();
+						DriverStation::ReportWarning("Stopping robot");
+						step = 4;
+					}
+					break;
+				case 4:
+					if ((play == 1) || (position == 1)) {
+						DriverStation::ReportWarning("Finishing play");
+						step = 9999;
+					}
+					else {
+						step = 5;
+					}
+					break;
+				case 5:		//turns the robot toward the switch plates
+					if (play == 2) {
+						turn_timer->Start();
+						if (position == 1){		//for left side
+							m_robotDrive.TankDrive(.25, -.25);
+							DriverStation::ReportWarning("Turning right");
+						}
+						else if (position == 3){	//for right side
+							m_robotDrive.TankDrive(-.25, .25);
+							DriverStation::ReportWarning("Turning left");
+						}
+
+						step = 6;
+					}
+					break;
+				case 6:		//stops the robot turning
+					if (turn_timer->HasPeriodPassed(.25)){
+						m_robotDrive.TankDrive(0.0, 0.0);
+						DriverStation::ReportWarning("Stopping robot");
+					}
+					step = 7;
+					break;
+				case 7:		//opens the gripper to release the cube
+					gripper.Set(true);
+					DriverStation::ReportWarning("Opening gripper");
+					step = 9999;
+					break;
+				case 9999:
+					DriverStation::ReportWarning("All steps done");
+					// All steps done.
+					break;
+				default:
+					break;
+			}
+		}
+		else {  // Not handling any other plays
+			return;
+		}
+		//		if (m_autoSelected == kAutoNameCustom) {
+		// Custom Auto goes here
+		//			if(autoLoopCounter < 100) //Check if we've completed 100 loops (approximately 2 seconds)
+		//			{
+		//				gyroAngle = analogGyro.GetAngle();
+		//				// Do something w/ the Angle
+		//				m_robotDrive.ArcadeDrive(-0.5, -gyroAngle * Kp); 	// drive forwards half speed
+
+		//				autoLoopCounter++;
+		//				} else {
+		//					m_robotDrive.ArcadeDrive(0.0, 0.0); 	// stop robot
+		//			}
+		//		} else {
 		// Default Auto goes here
-//			if(autoLoopCounter < 100) //Check if we've completed 100 loops (approximately 2 seconds)
-//			{
-//				gyroAngle = analogGyro.GetAngle();
-//				// Do something w/ the Angle
-//				m_robotDrive.ArcadeDrive(-0.5, -gyroAngle * Kp); 	// drive forwards half speed
-//
-//				autoLoopCounter++;
-//				} else {
-//					m_robotDrive.ArcadeDrive(0.0, 0.0); 	// stop robot
-//			}
-//		}
+		//			if(autoLoopCounter < 100) //Check if we've completed 100 loops (approximately 2 seconds)
+		//			{
+		//				gyroAngle = analogGyro.GetAngle();
+		//				// Do something w/ the Angle
+		//				m_robotDrive.ArcadeDrive(-0.5, -gyroAngle * Kp); 	// drive forwards half speed
+		//
+		//				autoLoopCounter++;
+		//				} else {
+		//					m_robotDrive.ArcadeDrive(0.0, 0.0); 	// stop robot
+		//			}
+		//		}
 	}
 
 	void TeleopInit() {
@@ -224,6 +401,147 @@ public:
 
 		return (distance);
 	}
+	//start of auto play functions
+	void DoNothing() {}
+
+	/*void CrossAutoLine(AutoLocation location) {
+		move_forward_timer->Reset();
+		turn_timer->Reset();
+		if (location == (Left | Right)) {
+			move_forward_timer->Start();
+			if (move_forward_timer->Get() <= 1.5) {
+				float leftY = M_SPEED;
+				float rightY = M_SPEED;
+				m_robotDrive.TankDrive(leftY, rightY);
+			}
+			else {
+				float leftY = 0.0;
+				float rightY = 0.0;
+				m_robotDrive.TankDrive(leftY, rightY);
+			}
+		}
+		else if (location == Middle) {
+			turn_timer->Start();
+			if (turn_timer->Get() <= .5) {
+				float leftY = T_SPEED;
+				float rightY = -T_SPEED;
+				m_robotDrive.TankDrive(leftY, rightY);
+
+				move_forward_timer->Start();
+				if (move_forward_timer->Get() <= 2.0) {
+					float leftY = M_SPEED;
+					float rightY = M_SPEED;
+					m_robotDrive.TankDrive(leftY, rightY);
+				}
+				else {
+					float leftY = 0.0;
+					float rightY = 0.0;
+					m_robotDrive.TankDrive(leftY, rightY);}
+			}
+			else {}
+		}
+	}
+
+	void DepressSwitch(AutoLocation location) {
+		move_forward_timer->Reset();
+		turn_timer->Reset();
+		lift_timer->Reset();
+		if ((location == Left)){
+			if (cSwitchVal == 'L'){
+				move_forward_timer->Start();
+				if (move_forward_timer->Get() <= 2.0) {
+					float leftY = M_SPEED;
+					float rightY = M_SPEED;
+					m_robotDrive.TankDrive(leftY, rightY);
+				}
+				else {}
+				turn_timer->Start();
+				if (turn_timer->Get() <= .5) {
+					float leftY = T_SPEED;
+					float rightY = -T_SPEED;
+					m_robotDrive.TankDrive(leftY, rightY);
+				}
+				lift_timer->Start();
+				if (lift_timer->Get() <= 1.5) {
+					double liftY = L_SPEED;
+					m_lift.Set(liftY);
+				}
+				gripper.Set(true);
+
+			}
+			else if (cSwitchVal == 'R'){
+				move_forward_timer->Start();
+				if (move_forward_timer->Get() <= 1.0) {
+					float leftY = M_SPEED;
+					float rightY = M_SPEED;
+					m_robotDrive.TankDrive(leftY, rightY);
+				}
+				move_forward_timer->Stop();
+				move_forward_timer->Reset();
+				turn_timer->Start();
+				if (turn_timer->Get() <= 0.5) {
+					float leftY = T_SPEED;
+					float rightY = -T_SPEED;
+					m_robotDrive.TankDrive(leftY, rightY);
+				}
+				turn_timer->Stop();
+				turn_timer->Reset();
+				move_forward_timer->Start();
+				if (move_forward_timer->Get() <= 2.0) {
+					float leftY = M_SPEED;
+					float rightY = M_SPEED;
+					m_robotDrive.TankDrive(leftY, rightY);
+				}
+				move_forward_timer->Stop();
+				move_forward_timer->Reset();
+				turn_timer->Start();
+				if (turn_timer->Get() <= 0.5) {
+					float leftY = -T_SPEED;
+					float rightY = T_SPEED;
+					m_robotDrive.TankDrive(leftY, rightY);
+				}
+				turn_timer->Stop();
+				turn_timer->Reset();
+				move_forward_timer->Start();
+			}
+		}
+		else if ((location == Right)) {
+			if (cSwitchVal == 'R') {
+				move_forward_timer->Start();
+				if (move_forward_timer->Get() <= 2.0) {
+					float leftY = M_SPEED;
+					float rightY = M_SPEED;
+					m_robotDrive.TankDrive(leftY, rightY);
+				}
+				else {}
+				turn_timer->Start();
+				if (turn_timer->Get() <= .5) {
+					float leftY = -T_SPEED;
+					float rightY = T_SPEED;
+					m_robotDrive.TankDrive(leftY, rightY);
+				}
+				lift_timer->Start();
+				if (lift_timer->Get() <= 1.5) {
+					double liftY = L_SPEED;
+					m_lift.Set(liftY);
+				}
+				gripper.Set(true);
+			}
+			if (cSwitchVal == 'L') {
+				move_forward_timer->Start();
+			}
+		}
+		else if ((location == Middle) ){
+			if ((cSwitchVal == 'R') || (cSwitchVal == 'L')) {
+
+			}
+		}
+	}
+
+	void DepressScale() {
+		move_forward_timer->Reset();
+		move_forward_timer->Start();
+	} */
 
 	void TeleopPeriodic() {
 		int offsetVal = 1;
@@ -359,7 +677,7 @@ public:
 
 			// pneumatics
 			// Singles
-//			intakeDeploy.Set(m_sensorBypassStick.GetRawButton(kDeployGrabber));
+			//			intakeDeploy.Set(m_sensorBypassStick.GetRawButton(kDeployGrabber));
 			gripper.Set(m_controlStick.GetRawButton(kGrabberEngage));
 			engageHook.Set(m_controlStick.GetRawButton(kHookDeploy));
 
@@ -475,7 +793,7 @@ public:
 			}
 
 			// Make it so....
-			m_rightIntake->Set(intakeX);
+			m_rightIntake->Set(intakeY);		//need to flip one of these
 			m_leftIntake->Set(intakeY);
 
 			//**********************************************************************************
@@ -503,6 +821,13 @@ public:
 	}
 
 private:
+	int play = 0;
+	int position = 0;
+
+	float M_SPEED = 0.5;	//Moving speed and turning speed, these two numbers need a lot of testing
+	float T_SPEED = 0.3;
+	float L_SPEED = 0.5;
+	//AutoLocation loc;
 
 	// Character arrays
 	char buffer[255];
@@ -601,7 +926,7 @@ private:
 	const double kPulsesPerRevolution = 4096;// PPR of encoder
 	const double k2Pi = 2.0 * 3.1415926;// 2 * Pi
 	const double kDistancePerPulse =
-	1.0 / (kPulsesPerRevolution * (k2Pi * kWheelRadius));
+			1.0 / (kPulsesPerRevolution * (k2Pi * kWheelRadius));
 	const double kMinRateNotStopped = 1.0;
 
 #endif
@@ -615,8 +940,8 @@ private:
 	const int kAverageBits = 4;
 
 	// Joystick deadband settings
-	const float kBottomOfDeadBand = -0.1;
-	const float kTopOfDeadBand = 0.1;
+	const float kBottomOfDeadBand = -0.2;
+	const float kTopOfDeadBand = 0.2;
 
 	// Analog scaling factor
 	const double kVoltsPerAnalogDivision = 5.0 / 4096.0;
@@ -628,6 +953,7 @@ private:
 	// Miscellaneous Globals
 	int autoLoopCounter;
 	float gyroAngle;
+	int step;
 	//***********************************************************************
 
 	// Which Controls box are we dealing with?
@@ -706,6 +1032,14 @@ private:
 	Joystick m_sensorBypassStick { kDisableSwitchJoystick };
 	Joystick m_controlStick { kControlJoystick };
 #endif
+	//Timers
+	Timer* move_forward_timer;
+	Timer* turn_timer;
+	Timer* lift_timer;
+	Timer* delay_timer;
+
+	bool finishedLifting;
+	bool startedLifting;
 
 	// Instantiate the Analog Inputs
 	AnalogInput m_autoSwitch1 { kRotarySw1Channel };
