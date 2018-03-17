@@ -31,7 +31,7 @@
 #include <Encoder.h>
 #include <AnalogInput.h>
 
-#define roboRioEncoders 	false
+#define roboRioEncoders 	true
 #define talonSRXEncoders 	false
 #define USE_NAVX   			false
 #define CNTL_BOX_A 			true
@@ -41,6 +41,9 @@
 #define DUAL_JOYSTICKS		true
 #define XBOX_CONTROLLER		false
 #define OI_ENABLED			true
+
+#define USE_PNEUMATICS		false
+#define USE_WINCH			true
 
 #if USE_NAVX
 // NavX-MXP headers
@@ -69,7 +72,7 @@ public:
 		backBar.Set(DoubleSolenoid::kReverse);
 		liftLocker.Set(DoubleSolenoid::kReverse);
 		gripper.Set(false);
-		//		intakeDeploy.Set(false);
+		//intakeDeploy.Set(false);
 		intakeDeploy.Set(DoubleSolenoid::kReverse);
 		engageHook.Set(false);
 
@@ -224,9 +227,11 @@ public:
 
 		//put arms up
 		//gripper.Set(m_controlStick.GetRawButton(kGrabberEngage));
+		intakeDeploy.Set(DoubleSolenoid::kReverse);
+		//intakeDeploy.Set(false);
 
 		//stop backbar from swinging
-		//backBar.Set(DoubleSolenoid::kOff);	//needs to be tested, kOff, try reverse of what the switch does
+		backBar.Set(DoubleSolenoid::kForward);		//works?
 
 		if (gameData.length() > 0) {
 			cSwitchVal   = gameData[0];
@@ -261,29 +266,30 @@ public:
 	void AutonomousPeriodic() {
 
 		// Lift was incorrect direction, but probably don't need to do
-		/*
+
 		if (!finishedLifting){
 			if (!startedLifting) {
 				lift_timer->Start();
-				m_lift.Set(0.5);
+				m_lift.Set(-0.35);
 				startedLifting = true;
 				DriverStation::ReportWarning("Raising lift");
 			}
-			if (lift_timer->HasPeriodPassed(.5)) {
+			if (lift_timer->HasPeriodPassed(1.0)) {
 				finishedLifting = true;
+				m_lift.Set(-0.2);
 				DriverStation::ReportWarning("Lift is up");
 			}
 
 			return; // DO NOTHING ELSE UNTIL THIS IS COMPLETED!!!!
 		}
-		*/
+
 
 
 		if (play == 0) {  // Play 0 is DO NOTHING
 			DriverStation::ReportWarning("Doing nothing");
 			return;
 		}
-		else if ((play == 1) || (play == 2)) {   // Play 1 is CROSS AUTO LINE
+		else if ((play == 1) || (play == 2) || (play == 3)) {   // Play 1 is CROSS AUTO LINE
 			switch (step) {
 				case 0:
 					delay_timer->Start();
@@ -291,7 +297,7 @@ public:
 					step = 1;
 					break;
 				case 1:
-					if (delay_timer->HasPeriodPassed(2.0)) {  // 2 second delay
+					if (delay_timer->HasPeriodPassed(0.0)) {  // 1 second delay
 						delay_timer->Stop();
 						DriverStation::ReportWarning("Delay timer stopped");
 						step = 2;
@@ -299,57 +305,157 @@ public:
 					break;
 				case 2:
 					move_forward_timer->Start();
-					if ((position == 1)) {
-						m_robotDrive.TankDrive(.35, .25);
+					if ((position == 1) && (cScaleVal == 'R')) {
+						m_robotDrive.TankDrive(.7, .5);			//test speeds
 						DriverStation::ReportWarning("Veering right");
+#if roboRioEncoders
+					SmartDashboard::PutNumber(
+							"Left Encoder Distance", m_leftEncoder.GetDistance());
+					SmartDashboard::PutNumber(
+							"Right Encoder Distance", m_rightEncoder.GetDistance());
+					//SmartDashboard::PutString("Distance is: " ((m_leftEncoder.GetDistance() + m_rightEncoder.GetDistance()) / 2));
+
+#endif
+						step = 3;
+					}
+					else if ((position == 1) && (cScaleVal == 'L')) {
+						m_robotDrive.TankDrive(.5, .7);
+						DriverStation::ReportWarning("Veering left");
+						step = 3;
 					}
 					else {
-						m_robotDrive.TankDrive(.5, .5);
+						m_robotDrive.TankDrive(.6, .6);
 						DriverStation::ReportWarning("Driving forward");
-					}
-					step = 3;
-
-					break;
-				case 3:
-					if (move_forward_timer->HasPeriodPassed(7.0)) {
-						m_robotDrive.TankDrive(0.0, 0.0);
-						move_forward_timer->Stop();
-						DriverStation::ReportWarning("Stopping robot");
 						step = 4;
 					}
+
 					break;
-				case 4:
-					if ((play == 1) || (position == 1)) {
+				case 3:			//stops robot driving after about 3.0 seconds
+					if (play == 1){
+						if(move_forward_timer->HasPeriodPassed(3.0)){
+							m_robotDrive.TankDrive(0.0, 0.0);
+							move_forward_timer->Stop();
+							move_forward_timer->Reset();
+							DriverStation::ReportWarning("Stopping robot");
+							step = 5;
+						}
+					}
+					else if (play == 2) {
+						if (move_forward_timer->HasPeriodPassed(3.5)) {
+							m_robotDrive.TankDrive(0.0, 0.0);
+							move_forward_timer->Stop();
+							move_forward_timer->Reset();
+							DriverStation::ReportWarning("Stopping robot");
+							step = 8;
+						}
+					}
+					else {
+						step = 9999;
+					}
+					break;
+				case 4:			//different times for different plays, 1 and 2 are pretty
+								//much the same, but are split up to make it easier to read
+					if ((play == 1)  && (move_forward_timer->HasPeriodPassed(3.5))) {
+						m_robotDrive.TankDrive(0.0, 0.0);
+						move_forward_timer->Stop();
+						DriverStation::ReportWarning("Stopping robot near switch");
+						step = 9999;
+					}
+					if ((play == 2) && (move_forward_timer->HasPeriodPassed(3.5))) {		//change later
+						m_robotDrive.TankDrive(0.0, 0.0);
+						move_forward_timer->Stop();
+						DriverStation::ReportWarning("Stopping robot near switch");
+						step = 6;
+					}
+					else if ((play == 3) && (move_forward_timer->HasPeriodPassed(5.5))) {
+						m_robotDrive.TankDrive(0.0, 0.0);
+						move_forward_timer->Stop();
+						DriverStation::ReportWarning("Stopping robot near scale");
+						step = 6;
+					}
+					break;
+				case 5:
+					if ((play == 1) && (position == 1)) {
 						DriverStation::ReportWarning("Finishing play");
 						step = 9999;
 					}
 					else {
-						step = 5;
-					}
-					break;
-				case 5:		//turns the robot toward the switch plates
-					if (play == 2) {
-						turn_timer->Start();
-						if (position == 1){		//for left side
-							m_robotDrive.TankDrive(.25, -.25);
-							DriverStation::ReportWarning("Turning right");
-						}
-						else if (position == 3){	//for right side
-							m_robotDrive.TankDrive(-.25, .25);
-							DriverStation::ReportWarning("Turning left");
-						}
-
 						step = 6;
 					}
 					break;
-				case 6:		//stops the robot turning
-					if (turn_timer->HasPeriodPassed(.25)){
-						m_robotDrive.TankDrive(0.0, 0.0);
-						DriverStation::ReportWarning("Stopping robot");
+				case 6:		//turns the robot toward the switch or the scale plates
+					turn_timer->Start();
+					if (position == 0){		//for left side
+						m_robotDrive.TankDrive(.6, -.6);
+						DriverStation::ReportWarning("Turning right");
+						step = 7;
 					}
-					step = 7;
+					else if (position == 2){	//for right side
+						m_robotDrive.TankDrive(-.6, .6);
+						DriverStation::ReportWarning("Turning left");
+						step = 7;
+					}
 					break;
-				case 7:		//opens the gripper to release the cube
+				case 7:		//stops the robot turning
+					if (turn_timer->HasPeriodPassed(.5)){
+						m_robotDrive.TankDrive(0.0, 0.0);
+						DriverStation::ReportWarning("Stopping robot from turning");
+						turn_timer->Stop();
+						turn_timer->Reset();
+						step = 8;
+					}
+					break;
+				case 8:
+					if ((position == 0) && (cSwitchVal == 'L')) {
+						lift_timer->Start();
+						DriverStation::ReportWarning("Starting lift timer");
+						m_lift.Set(0.4);
+						DriverStation::ReportWarning("Raising lift");
+						step = 9;			//goes to stop time when lift is kind of low
+					}
+					else if ((position == 2) && (cScaleVal == 'R')) {
+						lift_timer->Start();
+						DriverStation::ReportWarning("Starting lift timer");
+						m_lift.Set(0.4);
+						DriverStation::ReportWarning("Raising lift");
+						step = 10;			//goes to stop time when lift is high
+					}
+					else {
+						step = 9999;
+					}
+					break;
+				case 9:				//timer for play 2, the switch
+					if (lift_timer->HasPeriodPassed(3.0)) {		//need to test time
+						lift_timer->Stop();
+						DriverStation::ReportWarning("Stopping lift timer");
+						lift_timer->Reset();
+						m_lift.Set(0.0);
+						DriverStation::ReportWarning("Stopping lift");
+						step = 11;		//goes to spit out cube
+					}
+					break;
+				case 10:			//timer for play 3, the scale
+					if (lift_timer->HasPeriodPassed(5.0)) {			//need to test time
+						lift_timer->Stop();
+						DriverStation::ReportWarning("Stopping lift timer");
+						lift_timer->Reset();
+						m_lift.Set(0.0);
+						DriverStation::ReportWarning("Stopping lift");
+						step = 11;		//goes to spit out cube
+					}
+					break;
+				case 11:		//drops grabber arm
+					intakeDeploy.Set(DoubleSolenoid::kForward);
+					step = 12;
+					break;
+				case 12:			//spits out cube that we started with
+					m_rightIntake->Set(0.7);
+					m_leftIntake->Set(-0.7);
+					DriverStation::ReportWarning("Intake out");
+					step = 9999;
+					break;
+
+				case 81:		//opens the gripper to release the cube
 					gripper.Set(true);
 					DriverStation::ReportWarning("Opening gripper");
 					step = 9999;
@@ -360,6 +466,21 @@ public:
 					break;
 				default:
 					break;
+			}
+		}
+		if (USE_PNEUMATICS) {
+			switch(step) {
+			case 100: 		//for the gripper
+				if (play == 1){
+					gripper.Set(true);
+				}
+				break;
+			case 101:		//for y axis arms
+				if (play == 2){
+					//intakeDeploy.Set(true);
+					intakeDeploy.Set(DoubleSolenoid::kForward);
+				}
+				break;
 			}
 		}
 		else {  // Not handling any other plays
@@ -393,6 +514,7 @@ public:
 	}
 
 	void TeleopInit() {
+
 	}
 
 	double getInfraredDistance(int analogChannel) {
@@ -403,145 +525,6 @@ public:
 	}
 	//start of auto play functions
 	void DoNothing() {}
-
-	/*void CrossAutoLine(AutoLocation location) {
-		move_forward_timer->Reset();
-		turn_timer->Reset();
-		if (location == (Left | Right)) {
-			move_forward_timer->Start();
-			if (move_forward_timer->Get() <= 1.5) {
-				float leftY = M_SPEED;
-				float rightY = M_SPEED;
-				m_robotDrive.TankDrive(leftY, rightY);
-			}
-			else {
-				float leftY = 0.0;
-				float rightY = 0.0;
-				m_robotDrive.TankDrive(leftY, rightY);
-			}
-		}
-		else if (location == Middle) {
-			turn_timer->Start();
-			if (turn_timer->Get() <= .5) {
-				float leftY = T_SPEED;
-				float rightY = -T_SPEED;
-				m_robotDrive.TankDrive(leftY, rightY);
-
-				move_forward_timer->Start();
-				if (move_forward_timer->Get() <= 2.0) {
-					float leftY = M_SPEED;
-					float rightY = M_SPEED;
-					m_robotDrive.TankDrive(leftY, rightY);
-				}
-				else {
-					float leftY = 0.0;
-					float rightY = 0.0;
-					m_robotDrive.TankDrive(leftY, rightY);}
-			}
-			else {}
-		}
-	}
-
-	void DepressSwitch(AutoLocation location) {
-		move_forward_timer->Reset();
-		turn_timer->Reset();
-		lift_timer->Reset();
-		if ((location == Left)){
-			if (cSwitchVal == 'L'){
-				move_forward_timer->Start();
-				if (move_forward_timer->Get() <= 2.0) {
-					float leftY = M_SPEED;
-					float rightY = M_SPEED;
-					m_robotDrive.TankDrive(leftY, rightY);
-				}
-				else {}
-				turn_timer->Start();
-				if (turn_timer->Get() <= .5) {
-					float leftY = T_SPEED;
-					float rightY = -T_SPEED;
-					m_robotDrive.TankDrive(leftY, rightY);
-				}
-				lift_timer->Start();
-				if (lift_timer->Get() <= 1.5) {
-					double liftY = L_SPEED;
-					m_lift.Set(liftY);
-				}
-				gripper.Set(true);
-
-			}
-			else if (cSwitchVal == 'R'){
-				move_forward_timer->Start();
-				if (move_forward_timer->Get() <= 1.0) {
-					float leftY = M_SPEED;
-					float rightY = M_SPEED;
-					m_robotDrive.TankDrive(leftY, rightY);
-				}
-				move_forward_timer->Stop();
-				move_forward_timer->Reset();
-				turn_timer->Start();
-				if (turn_timer->Get() <= 0.5) {
-					float leftY = T_SPEED;
-					float rightY = -T_SPEED;
-					m_robotDrive.TankDrive(leftY, rightY);
-				}
-				turn_timer->Stop();
-				turn_timer->Reset();
-				move_forward_timer->Start();
-				if (move_forward_timer->Get() <= 2.0) {
-					float leftY = M_SPEED;
-					float rightY = M_SPEED;
-					m_robotDrive.TankDrive(leftY, rightY);
-				}
-				move_forward_timer->Stop();
-				move_forward_timer->Reset();
-				turn_timer->Start();
-				if (turn_timer->Get() <= 0.5) {
-					float leftY = -T_SPEED;
-					float rightY = T_SPEED;
-					m_robotDrive.TankDrive(leftY, rightY);
-				}
-				turn_timer->Stop();
-				turn_timer->Reset();
-				move_forward_timer->Start();
-			}
-		}
-		else if ((location == Right)) {
-			if (cSwitchVal == 'R') {
-				move_forward_timer->Start();
-				if (move_forward_timer->Get() <= 2.0) {
-					float leftY = M_SPEED;
-					float rightY = M_SPEED;
-					m_robotDrive.TankDrive(leftY, rightY);
-				}
-				else {}
-				turn_timer->Start();
-				if (turn_timer->Get() <= .5) {
-					float leftY = -T_SPEED;
-					float rightY = T_SPEED;
-					m_robotDrive.TankDrive(leftY, rightY);
-				}
-				lift_timer->Start();
-				if (lift_timer->Get() <= 1.5) {
-					double liftY = L_SPEED;
-					m_lift.Set(liftY);
-				}
-				gripper.Set(true);
-			}
-			if (cSwitchVal == 'L') {
-				move_forward_timer->Start();
-			}
-		}
-		else if ((location == Middle) ){
-			if ((cSwitchVal == 'R') || (cSwitchVal == 'L')) {
-
-			}
-		}
-	}
-
-	void DepressScale() {
-		move_forward_timer->Reset();
-		move_forward_timer->Start();
-	} */
 
 	void TeleopPeriodic() {
 		int offsetVal = 1;
@@ -562,8 +545,8 @@ public:
 		bool bLiftTopLSDisable = false;
 		bool bLiftBottomLSDisable = false;
 		bool bExtra1Disable = false;
-		bool bExtra2Disable = false;
-		bool bExtra3Disable = false;
+		bool goFastForLift = false;
+		bool stopWinchMotor = false;
 
 		while (IsOperatorControl()) {
 
@@ -677,7 +660,7 @@ public:
 
 			// pneumatics
 			// Singles
-			//			intakeDeploy.Set(m_sensorBypassStick.GetRawButton(kDeployGrabber));
+			//intakeDeploy.Set(m_sensorBypassStick.GetRawButton(kDeployGrabber));
 			gripper.Set(m_controlStick.GetRawButton(kGrabberEngage));
 			engageHook.Set(m_controlStick.GetRawButton(kHookDeploy));
 
@@ -689,9 +672,9 @@ public:
 			}
 
 			if (m_controlStick.GetRawButton(kBackBarDeploy)) {
-				backBar.Set(DoubleSolenoid::kForward);
-			} else {
 				backBar.Set(DoubleSolenoid::kReverse);
+			} else {
+				backBar.Set(DoubleSolenoid::kForward);
 			}
 
 			if (m_controlStick.GetRawButton(kLiftLockEngage)) {
@@ -717,9 +700,30 @@ public:
 			bLeftEncoderDisable  = m_sensorBypassStick.GetRawButton(kDisableLeftEnc);
 			bStringPotDisable    = m_sensorBypassStick.GetRawButton(kDisableStringPot);
 			bExtra1Disable       = m_sensorBypassStick.GetRawButton(kDisableExtra1);
-			bExtra2Disable       = m_sensorBypassStick.GetRawButton(kDisableExtra2);
-			bExtra3Disable       = m_sensorBypassStick.GetRawButton(kDisableExtra3);
+			goFastForLift        = m_sensorBypassStick.GetRawButton(kDisableExtra2);
+			stopWinchMotor       = m_sensorBypassStick.GetRawButton(kDisableExtra3);
 
+			double winchValue = m_sensorBypassStick.GetY();
+
+#if USE_WINCH
+			if (winchValue > 0.25) {
+				m_winch->Set(0.20);
+			}
+			else if (winchValue < -0.25) {
+				m_winch->Set(-0.20);
+			}
+			else {
+				m_winch->Set(0.0);
+			}
+			/**
+			if (stopWinchMotor) {
+				m_winch->Set(0.0);
+			}
+			else {
+				m_winch->Set(0.20);
+			}
+			**/
+#endif
 			//**********************************************************************************
 
 			//**********************************************************************************
@@ -736,6 +740,8 @@ public:
 			if (!bStringPotDisable) {
 				dLiftHeight = m_liftHeight.GetVoltage();
 				// TODO: Calculate the height from the voltage
+				//sprintf(buffer, "Height Voltage: %2f\n", dLiftHeight);
+				//DriverStation::ReportWarning(buffer);
 			}
 			//**********************************************************************************
 
@@ -759,6 +765,16 @@ public:
 				}
 			}
 			// Make it so....
+			// NOTE: This is cubing which keeps sign
+			liftY = liftY * liftY * liftY;
+
+			// NOTE: This is squaring which needs abs on one to keep sign
+			//liftY = liftY * abs(liftY);
+
+			// NOTE: Stall the lift if we are a really small number
+			if ((liftY > -0.05) and (liftY < 0.05)) {
+				liftY = -0.20;
+			}
 
 			m_lift.Set(liftY);
 
@@ -792,9 +808,13 @@ public:
 				}
 			}
 
+			if (!goFastForLift) {
+				intakeY *= 0.8;
+			}
+
 			// Make it so....
 			m_rightIntake->Set(intakeY);		//need to flip one of these
-			m_leftIntake->Set(intakeY);
+			m_leftIntake->Set(-intakeY);
 
 			//**********************************************************************************
 
@@ -818,6 +838,7 @@ public:
 	}
 
 	void TestPeriodic() {
+
 	}
 
 private:
@@ -850,7 +871,7 @@ private:
 	// End Effector
 	const static int kRightIntake = 7;
 	const static int kLeftIntake = 8;
-	const static int kSpareMC = 9;
+	const static int kWinch = 9;
 	const static int kRightLift = 10;
 	const static int kLeftLift = 11;
 	// End CAN IDs *************************************************************
@@ -860,10 +881,10 @@ private:
 	const static int backBarOut = 1;  // Double
 	const static int liftLock = 2;  // Double
 	const static int liftUnlock = 3;  // Double
-	const static int deployIntake = 4;  // single
+	const static int deployIntakeIn = 4;  // single
 	const static int gripCube = 5;  // single
 	const static int hook = 6;  // single
-	const static int dummy = 7;
+	const static int deployIntakeOut = 7;
 
 	// Analog Port assignments
 	const static int kRotarySw1Channel = 0;
@@ -904,8 +925,8 @@ private:
 	const int kBackBarDeploy = 3;
 	const int kLiftLockEngage = 4;
 
-	const int kLiftJoystickY = 4;  // Axis 4 Y
-	const int kLiftJoystickX = 5;  // Axis 5 X
+	const int kLiftJoystickY = 2;  // Axis 2 Y
+	const int kLiftJoystickX = 3;  // Axis 3 X
 	const int kIntakeJoystickY = 1;  // Axis 1 Y
 	const int kIntakeJoystickX = 0;  // Axis 0 X
 	const int kSpeedPot = 2;  // Axis 2
@@ -958,8 +979,8 @@ private:
 
 	// Which Controls box are we dealing with?
 #if CNTL_BOX_A
-	WPI_VictorSPX *m_frontLeft = new WPI_VictorSPX(frontLeftChannel);
-	WPI_VictorSPX *m_frontRight = new WPI_VictorSPX(frontRightChannel);
+	WPI_TalonSRX *m_frontLeft = new WPI_TalonSRX(frontLeftChannel);		//these should be changed to talons
+	WPI_TalonSRX *m_frontRight = new WPI_TalonSRX(frontRightChannel);
 
 #if ON_ROBOT
 	WPI_TalonSRX *m_rearLeft = new WPI_TalonSRX(rearLeftChannel);
@@ -968,7 +989,7 @@ private:
 
 	WPI_VictorSPX *m_rightIntake = new WPI_VictorSPX(kRightIntake);
 	WPI_VictorSPX *m_leftIntake = new WPI_VictorSPX(kLeftIntake);
-	WPI_VictorSPX *m_spareMC = new WPI_VictorSPX(kSpareMC);
+	WPI_VictorSPX *m_winch = new WPI_VictorSPX(kWinch);
 	WPI_VictorSPX *m_rightLift = new WPI_VictorSPX(kRightLift);
 	WPI_VictorSPX *m_leftLift = new WPI_VictorSPX(kLeftLift);
 
@@ -995,7 +1016,7 @@ private:
 
 	WPI_TalonSRX *m_rightIntake = new WPI_TalonSRX(kRightIntake);
 	WPI_TalonSRX *m_leftIntake = new WPI_TalonSRX(kLeftIntake);
-	WPI_TalonSRX *m_spareMC = new WPI_TalonSRX(kSpareMC);
+	WPI_TalonSRX *m_winch = new WPI_TalonSRX(kWinch);
 	WPI_TalonSRX *m_rightLift = new WPI_TalonSRX(kRightLift);
 	WPI_TalonSRX *m_leftLift = new WPI_TalonSRX(kLeftLift);
 
@@ -1057,7 +1078,8 @@ private:
 	DoubleSolenoid backBar { kPcmCanAddress, backBarIn, backBarOut };
 	DoubleSolenoid liftLocker { kPcmCanAddress, liftLock, liftUnlock };
 	Solenoid gripper { kPcmCanAddress, gripCube };
-	DoubleSolenoid intakeDeploy { kPcmCanAddress, deployIntake,  dummy};
+	//Solenoid intakeDeploy { kPcmCanAddress, deployIntakeIn};
+	DoubleSolenoid intakeDeploy { kPcmCanAddress, deployIntakeIn,  deployIntakeOut};
 	Solenoid engageHook { kPcmCanAddress, hook };
 
 #if talonSRXEncoders
