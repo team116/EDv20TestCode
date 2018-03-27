@@ -45,6 +45,8 @@
 #define USE_PNEUMATICS		false
 #define USE_WINCH			true
 
+#define DEMO_BOT			false
+
 #if USE_NAVX
 // NavX-MXP headers
 #include "AHRS.h"
@@ -646,6 +648,18 @@ public:
 #if DUAL_JOYSTICKS
 			rightY = -m_stickR.GetY();
 			leftY = -m_stickL.GetY();
+#if DEMO_BOT
+			double leftScale, rightScale;
+			rightScale = rightY * rightY * rightY;
+			leftScale = leftY * leftY * leftY;
+			if (rightScale > 0.7) rightScale = 0.7;
+			if (leftScale > 0.7) leftScale = 0.7;
+			if (rightScale < -0.7) rightScale = -0.7;
+			if (leftScale < -0.7) leftScale = -0.7;
+			rightY = rightScale;
+			leftY = leftScale;
+#endif
+
 #endif
 			if ((rightY > kBottomOfDeadBand) and (rightY < kTopOfDeadBand))
 				rightY = 0.0;
@@ -749,6 +763,11 @@ public:
 			// Lift Joystick
 			liftY = -m_controlStick.GetRawAxis(kLiftJoystickY);
 
+//			sprintf(buffer, "B4 JoyStick Lift : %f\n", liftY);
+//			DriverStation::ReportWarning(buffer);
+
+
+
 			if ((liftY > kBottomOfDeadBand) and (liftY < kTopOfDeadBand))
 				liftY = 0.0;
 
@@ -766,7 +785,7 @@ public:
 			}
 			// Make it so....
 			// NOTE: This is cubing which keeps sign
-			liftY = liftY * liftY * liftY;
+			//liftY = liftY * liftY * liftY;
 
 			// NOTE: This is squaring which needs abs on one to keep sign
 			//liftY = liftY * abs(liftY);
@@ -775,6 +794,11 @@ public:
 			if ((liftY > -0.05) and (liftY < 0.05)) {
 				liftY = -0.20;
 			}
+
+//			sprintf(buffer, "AFT JoyStick Lift: %f\n", liftY);
+//			DriverStation::ReportWarning(buffer);
+
+
 
 			m_lift.Set(liftY);
 
