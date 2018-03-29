@@ -91,12 +91,17 @@ public:
 		move_forward_timer = new Timer();
 		lift_timer = new Timer();
 		turn_timer = new Timer();
+		intake_delay_timer = new Timer();
+		intake_eject_timer = new Timer();
 
 
 #if ENABLE_USB_CAMERA
 		// enable camera
 		CameraServer::GetInstance()->StartAutomaticCapture();
 #endif
+
+		// Set the right lift motor to be inverted
+		m_rightLift->SetInverted(true);
 
 		// Disable the watchdog timers to keep the warning messages down
 		m_robotDrive.SetSafetyEnabled(false);
@@ -208,6 +213,8 @@ public:
 		move_forward_timer->Reset();
 		turn_timer->Reset();
 		lift_timer->Reset();
+		intake_delay_timer->Reset();
+		intake_eject_timer->Reset();
 
 		finishedLifting = false;
 		startedLifting = false;
@@ -276,9 +283,11 @@ public:
 				startedLifting = true;
 				DriverStation::ReportWarning("Raising lift");
 			}
-			if (lift_timer->HasPeriodPassed(1.0)) {
+			if (lift_timer->HasPeriodPassed(2.5)) {
+				lift_timer->Stop();
+				lift_timer->Reset();
 				finishedLifting = true;
-				m_lift.Set(-0.2);
+				m_lift.Set(kLiftStallPower);
 				DriverStation::ReportWarning("Lift is up");
 			}
 
@@ -302,12 +311,15 @@ public:
 					if (delay_timer->HasPeriodPassed(0.0)) {  // 1 second delay
 						delay_timer->Stop();
 						DriverStation::ReportWarning("Delay timer stopped");
+
+						intakeDeploy.Set(DoubleSolenoid::kForward);
+						DriverStation::ReportWarning("Intake deploy with cube");
 						step = 2;
 					}
 					break;
 				case 2:
 					move_forward_timer->Start();
-					if ((position == 1) && (cScaleVal == 'R')) {
+					if ((position == 1) && (cSwitchVal == 'R')) {
 						m_robotDrive.TankDrive(.7, .5);			//test speeds
 						DriverStation::ReportWarning("Veering right");
 #if roboRioEncoders
@@ -320,7 +332,7 @@ public:
 #endif
 						step = 3;
 					}
-					else if ((position == 1) && (cScaleVal == 'L')) {
+					else if ((position == 1) && (cSwitchVal == 'L')) {
 						m_robotDrive.TankDrive(.5, .7);
 						DriverStation::ReportWarning("Veering left");
 						step = 3;
@@ -387,19 +399,23 @@ public:
 					break;
 				case 6:		//turns the robot toward the switch or the scale plates
 					turn_timer->Start();
-					if (position == 0){		//for left side
+					if ((position == 0) && (cSwitchVal == 'L')) {		//for left side
 						m_robotDrive.TankDrive(.6, -.6);
 						DriverStation::ReportWarning("Turning right");
 						step = 7;
 					}
-					else if (position == 2){	//for right side
+					else if ((position == 2) && (cSwitchVal == 'R')) {	//for right side
 						m_robotDrive.TankDrive(-.6, .6);
 						DriverStation::ReportWarning("Turning left");
 						step = 7;
 					}
+					else {
+						DriverStation::ReportWarning("Do not turn when on wrong side");
+						step = 9999;
+					}
 					break;
 				case 7:		//stops the robot turning
-					if (turn_timer->HasPeriodPassed(.5)){
+					if (turn_timer->HasPeriodPassed(2.5)){
 						m_robotDrive.TankDrive(0.0, 0.0);
 						DriverStation::ReportWarning("Stopping robot from turning");
 						turn_timer->Stop();
@@ -411,23 +427,25 @@ public:
 					if ((position == 0) && (cSwitchVal == 'L')) {
 						lift_timer->Start();
 						DriverStation::ReportWarning("Starting lift timer");
-						m_lift.Set(0.4);
+						//m_lift.Set(-0.4);
+						m_lift.Set(kLiftStallPower);
 						DriverStation::ReportWarning("Raising lift");
 						step = 9;			//goes to stop time when lift is kind of low
 					}
-					else if ((position == 2) && (cScaleVal == 'R')) {
+					else if ((position == 2) && (cSwitchVal == 'R')) {
 						lift_timer->Start();
 						DriverStation::ReportWarning("Starting lift timer");
-						m_lift.Set(0.4);
+						m_lift.Set(kLiftStallPower);
+						//m_lift.Set(-0.4);
 						DriverStation::ReportWarning("Raising lift");
-						step = 10;			//goes to stop time when lift is high
+						step = 9;			//goes to stop time when lift is high
 					}
 					else {
 						step = 9999;
 					}
 					break;
 				case 9:				//timer for play 2, the switch
-					if (lift_timer->HasPeriodPassed(3.0)) {		//need to test time
+					if (lift_timer->HasPeriodPassed(0.0)) {		//need to test time
 						lift_timer->Stop();
 						DriverStation::ReportWarning("Stopping lift timer");
 						lift_timer->Reset();
@@ -447,14 +465,33 @@ public:
 					}
 					break;
 				case 11:		//drops grabber arm
+					DriverStation::ReportWarning("Dropping intake");
 					intakeDeploy.Set(DoubleSolenoid::kForward);
+					intake_delay_timer->Start();
 					step = 12;
 					break;
-				case 12:			//spits out cube that we started with
-					m_rightIntake->Set(0.7);
-					m_leftIntake->Set(-0.7);
+				case 12:
+					if (intake_delay_timer->HasPeriodPassed(0.5)) {
+						DriverStation::ReportWarning("Intake dropped");
+						intake_delay_timer->Stop();
+						intake_delay_timer->Reset();
+						step = 13;
+					}
+					break;
+				case 13:			//spits out cube that we started with
+					m_rightIntake->Set(-0.7);
+					m_leftIntake->Set(0.7);
 					DriverStation::ReportWarning("Intake out");
-					step = 9999;
+					intake_eject_timer->Start();
+					step = 14;
+					break;
+				case 14:
+					if (intake_eject_timer->HasPeriodPassed(1.0)) {
+						DriverStation::ReportWarning("Intake block ejected");
+						intake_eject_timer->Stop();
+						intake_eject_timer->Reset();
+						step = 9999;
+					}
 					break;
 
 				case 81:		//opens the gripper to release the cube
@@ -463,6 +500,11 @@ public:
 					step = 9999;
 					break;
 				case 9999:
+					// NOTE: Turn everything off!!!
+					m_lift.Set(0.0);
+					m_rightIntake->Set(0.0);
+					m_leftIntake->Set(0.0);
+					m_robotDrive.TankDrive(0.0, 0.0);
 					DriverStation::ReportWarning("All steps done");
 					// All steps done.
 					break;
@@ -516,6 +558,7 @@ public:
 	}
 
 	void TeleopInit() {
+		printCounter = 0;
 
 	}
 
@@ -721,7 +764,8 @@ public:
 
 #if USE_WINCH
 			if (winchValue > 0.25) {
-				m_winch->Set(0.20);
+				m_winch->Set(0.0);  // NOTE: Don't ever winch against socket wrench
+				//m_winch->Set(0.20);
 			}
 			else if (winchValue < -0.25) {
 				m_winch->Set(-0.20);
@@ -752,10 +796,14 @@ public:
 
 			//**********************************************************************************
 			if (!bStringPotDisable) {
-				dLiftHeight = m_liftHeight.GetVoltage();
-				// TODO: Calculate the height from the voltage
-				//sprintf(buffer, "Height Voltage: %2f\n", dLiftHeight);
-				//DriverStation::ReportWarning(buffer);
+				++printCounter;
+				if (printCounter > 20) {
+					dLiftHeight = m_liftHeight.GetVoltage();
+					// TODO: Calculate the height from the voltage
+					//sprintf(buffer, "Height Voltage: %2f\n", dLiftHeight);
+					//DriverStation::ReportWarning(buffer);
+					printCounter = 0;
+				}
 			}
 			//**********************************************************************************
 
@@ -763,14 +811,15 @@ public:
 			// Lift Joystick
 			liftY = -m_controlStick.GetRawAxis(kLiftJoystickY);
 
-//			sprintf(buffer, "B4 JoyStick Lift : %f\n", liftY);
-//			DriverStation::ReportWarning(buffer);
+			//sprintf(buffer, "B4 JoyStick Lift : %f\n", liftY);
+			//DriverStation::ReportWarning(buffer);
 
 
 
 			if ((liftY > kBottomOfDeadBand) and (liftY < kTopOfDeadBand))
 				liftY = 0.0;
 
+			/** Do not look at limit sensors for lift at the moment!!!!
 			if (!bLiftTopLSDisable) {
 				if (m_atLiftTop.Get()) {
 					// stop the Lift
@@ -783,20 +832,28 @@ public:
 					liftY = 0.0;
 				}
 			}
+			**/
+
 			// Make it so....
 			// NOTE: This is cubing which keeps sign
-			//liftY = liftY * liftY * liftY;
+			liftY = liftY * liftY * liftY;
 
 			// NOTE: This is squaring which needs abs on one to keep sign
 			//liftY = liftY * abs(liftY);
 
 			// NOTE: Stall the lift if we are a really small number
 			if ((liftY > -0.05) and (liftY < 0.05)) {
-				liftY = -0.20;
+				if (m_controlStick.GetRawButton(kLiftLockEngage)) {
+					//liftY = -0.20;
+					liftY = kLiftStallPower;
+				}
+				else {
+					liftY = 0.0;
+				}
 			}
 
-//			sprintf(buffer, "AFT JoyStick Lift: %f\n", liftY);
-//			DriverStation::ReportWarning(buffer);
+			//sprintf(buffer, "AFT JoyStick Lift: %f\n", liftY);
+			//DriverStation::ReportWarning(buffer);
 
 
 
@@ -913,8 +970,8 @@ private:
 	// Analog Port assignments
 	const static int kRotarySw1Channel = 0;
 	const static int kRotarySw2Channel = 1;
-	const static int kLiftHightChannel = 2;
-	const static int kInfraredChannel = 3;
+	const static int kLiftHightChannel = 3;
+	const static int kInfraredChannel = 2;
 
 	// Digital IOs
 	const static int kLeftIntakeLimitSw = 0;
@@ -990,6 +1047,8 @@ private:
 
 	// Analog scaling factor
 	const double kVoltsPerAnalogDivision = 5.0 / 4096.0;
+
+	const double kLiftStallPower = -0.05;
 
 	// Height of the elevator
 	double dLiftHeight = 0.0;
@@ -1082,6 +1141,10 @@ private:
 	Timer* turn_timer;
 	Timer* lift_timer;
 	Timer* delay_timer;
+	Timer* intake_delay_timer;
+	Timer* intake_eject_timer;
+
+	int printCounter;
 
 	bool finishedLifting;
 	bool startedLifting;
