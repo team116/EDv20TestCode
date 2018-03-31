@@ -400,12 +400,12 @@ public:
 				case 6:		//turns the robot toward the switch or the scale plates
 					turn_timer->Start();
 					if ((position == 0) && (cSwitchVal == 'L')) {		//for left side
-						m_robotDrive.TankDrive(.6, -.6);
+						m_robotDrive.TankDrive(.7, -.7);
 						DriverStation::ReportWarning("Turning right");
 						step = 7;
 					}
 					else if ((position == 2) && (cSwitchVal == 'R')) {	//for right side
-						m_robotDrive.TankDrive(-.6, .6);
+						m_robotDrive.TankDrive(-.7, .7);
 						DriverStation::ReportWarning("Turning left");
 						step = 7;
 					}
@@ -415,7 +415,7 @@ public:
 					}
 					break;
 				case 7:		//stops the robot turning
-					if (turn_timer->HasPeriodPassed(2.5)){
+					if (turn_timer->HasPeriodPassed(2.25)){
 						m_robotDrive.TankDrive(0.0, 0.0);
 						DriverStation::ReportWarning("Stopping robot from turning");
 						turn_timer->Stop();
@@ -467,11 +467,12 @@ public:
 				case 11:		//drops grabber arm
 					DriverStation::ReportWarning("Dropping intake");
 					intakeDeploy.Set(DoubleSolenoid::kForward);
+					m_robotDrive.TankDrive(0.6, 0.6);
 					intake_delay_timer->Start();
 					step = 12;
 					break;
 				case 12:
-					if (intake_delay_timer->HasPeriodPassed(0.5)) {
+					if (intake_delay_timer->HasPeriodPassed(1.0)) {
 						DriverStation::ReportWarning("Intake dropped");
 						intake_delay_timer->Stop();
 						intake_delay_timer->Reset();
@@ -487,6 +488,7 @@ public:
 					break;
 				case 14:
 					if (intake_eject_timer->HasPeriodPassed(1.0)) {
+						gripper.Set(true);
 						DriverStation::ReportWarning("Intake block ejected");
 						intake_eject_timer->Stop();
 						intake_eject_timer->Reset();
@@ -768,7 +770,8 @@ public:
 				//m_winch->Set(0.20);
 			}
 			else if (winchValue < -0.25) {
-				m_winch->Set(-0.20);
+				m_winch->Set(-0.60);
+				//m_winch->Set(-0.20);
 			}
 			else {
 				m_winch->Set(0.0);
